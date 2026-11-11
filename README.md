@@ -60,13 +60,39 @@ conferma e login hanno limiti di richieste.
 | Frontend | Angular (componenti standalone, signals), Angular Material, RxJS |
 | Test | PHPUnit (Feature e Unit) |
 
-## Requisiti
+## Prova rapida con Docker
+
+Serve solo Docker Desktop. Dalla radice del progetto:
+
+```bash
+docker compose up --build
+```
+
+La prima volta costruisce le immagini (qualche minuto). Poi:
+
+| Cosa | Indirizzo |
+|---|---|
+| Applicazione | <http://localhost:8080> |
+| Email di prova (Mailpit) | <http://localhost:8025> |
+
+- Entra come admin con `admin@example.com` / `password`, oppure registrati: la mail di conferma si legge su Mailpit.
+- Parte tutto da solo: il frontend compilato (nginx, che inoltra `/api` e `/sanctum` al backend), Laravel con
+  FrankenPHP, il worker delle email, lo scheduler, Postgres e Mailpit. Migrazioni e dati di prova vengono
+  eseguiti al primo avvio.
+- `docker compose down` ferma tutto e conserva i dati; `docker compose down -v` cancella anche il database.
+- Se le porte sono occupate: `WEB_PORT=9090 MAILPIT_PORT=9025 docker compose up --build`.
+
+> È una configurazione **solo per provare l'app**: chiave, password del database e admin sono quelli di prova, le
+> immagini includono le dipendenze di sviluppo (il seeder usa Faker) e il frontend è compilato in modalità
+> `development`. Per lavorare sul codice si usa l'avvio qui sotto.
+
+## Requisiti per lo sviluppo
 
 - Docker Desktop
 - Node.js 22 e npm
 - Angular CLI (`npm install -g @angular/cli`)
 
-## Avvio in locale
+## Avvio per lo sviluppo
 
 ### 1. Backend
 

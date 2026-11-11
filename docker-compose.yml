@@ -1,0 +1,119 @@
+# Avvio dell'intera applicazione per provarla:   docker compose up --build
+#   Frontend:  http://localhost:8080      Email di prova (Mailpit):  http://localhost:8025
+#
+# Le porte si cambiano con le variabili WEB_PORT e MAILPIT_PORT, ad esempio:
+#   WEB_PORT=9090 docker compose up --build
+#
+# ATTENZIONE: la chiave dell'app e la password del database qui sotto, e l'admin creato dal seeder
+# (admin@example.com / password), sono solo per la demo locale: non usarli altrove.
+
+name: sistema-prenotazioni
+
+x-api: &api
+  build: ./booking-api
+  image: sistema-prenotazioni-api:demo
+  environment: &api-env
+    APP_NAME: "Sistema prenotazioni"
+    APP_ENV: production
+    APP_DEBUG: "false"
+    APP_KEY: ${APP_KEY:-base64:vhl9OuydSSqOasEqR4x5eKYXvwlIaO/cqg7+Y3ZrPbk=}
+    APP_TIMEZONE: Europe/Rome
+    APP_URL: http://localhost:${WEB_PORT:-8080}
+    FRONTEND_URL: http://localhost:${WEB_PORT:-8080}
+    SANCTUM_STATEFUL_DOMAINS: localhost:${WEB_PORT:-8080}
+    LOG_CHANNEL: stderr
+    DB_CONNECTION: pgsql
+    DB_HOST: db
+    DB_PORT: "5432"
+    DB_DATABASE: booking
+    DB_USERNAME: booking
+    DB_PASSWORD: booking
+    SESSION_DRIVER: database
+    QUEUE_CONNECTION: database
+    CACHE_STORE: database
+    MAIL_MAILER: smtp
+    MAIL_HOST: mailpit
+    MAIL_PORT: "1025"
+    MAIL_FROM_ADDRESS: noreply@example.com
+    MAIL_FROM_NAME: "Sistema prenotazioni"
+
+services:
+  # Database
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: booking
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: booking
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking -d booking"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Casella di posta finta: qui si leggono le email di conferma della registrazione
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
+
+  # Backend Laravel. All'avvio esegue le migrazioni e, la prima volta, i dati di prova
+  app:
+    <<: *api
+    environment:
+      <<: *api-env
+      CONTAINER_ROLE: app
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@file_get_contents(\"http://localhost/up\") === false ? 1 : 0);'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # Esegue i job in coda (senza di lui le email di conferma non partono)
+  worker:
+    <<: *api
+    environment:
+      <<: *api-env
+      CONTAINER_ROLE: worker
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--max-time=3600"]
+    healthcheck:
+      disable: true   # il controllo ereditato dall'immagine riguarda il server web, che qui non c'è
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Esegue i compiti pianificati (pulizia delle registrazioni scadute)
+  scheduler:
+    <<: *api
+    environment:
+      <<: *api-env
+      CONTAINER_ROLE: scheduler
+    command: ["php", "artisan", "schedule:work"]
+    healthcheck:
+      disable: true   # il controllo ereditato dall'immagine riguarda il server web, che qui non c'è
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Frontend Angular compilato, servito da nginx; inoltra /api e /sanctum al backend
+  web:
+    build: ./booking-frontend
+    image: sistema-prenotazioni-web:demo
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  db-data:
