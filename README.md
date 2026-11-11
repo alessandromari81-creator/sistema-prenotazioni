@@ -27,6 +27,23 @@ booking-system/
 - Gestione delle fasce orarie settimanali di ogni risorsa (senza sovrapposizioni)
 - Vista di tutte le prenotazioni
 
+## Screenshot
+
+| | |
+|---|---|
+| **Accesso** | **Risorse prenotabili** |
+| ![Pagina di accesso](docs/screenshots/frontend-login.png) | ![Elenco delle risorse prenotabili](docs/screenshots/frontend-risorse.png) |
+| **Le mie prenotazioni** | **Gestione risorse (admin)** |
+| ![Elenco delle prenotazioni dell'utente](docs/screenshots/frontend-mie-prenotazioni.png) | ![Gestione delle risorse per l'amministratore](docs/screenshots/frontend-admin-risorse.png) |
+
+Scelta della data e dello slot libero:
+
+![Scelta della data e dello slot](docs/screenshots/frontend-scelta-slot.png)
+
+L'email di conferma della registrazione, letta su Mailpit:
+
+![Email di conferma su Mailpit](docs/screenshots/mailpit-conferma.png)
+
 ## Registrazione in due passi
 
 1. Il form invia nome, email, password e indirizzo. L'API salva una **registrazione in attesa**
@@ -74,13 +91,14 @@ La prima volta costruisce le immagini (qualche minuto). Poi:
 |---|---|
 | Applicazione | <http://localhost:8080> |
 | Email di prova (Mailpit) | <http://localhost:8025> |
+| Documentazione dell'API (Swagger UI) | <http://localhost:8081> |
 
 - Entra come admin con `admin@example.com` / `password`, oppure registrati: la mail di conferma si legge su Mailpit.
 - Parte tutto da solo: il frontend compilato (nginx, che inoltra `/api` e `/sanctum` al backend), Laravel con
-  FrankenPHP, il worker delle email, lo scheduler, Postgres e Mailpit. Migrazioni e dati di prova vengono
+  FrankenPHP, il worker delle email, lo scheduler, Postgres, Mailpit e Swagger UI. Migrazioni e dati di prova vengono
   eseguiti al primo avvio.
 - `docker compose down` ferma tutto e conserva i dati; `docker compose down -v` cancella anche il database.
-- Se le porte sono occupate: `WEB_PORT=9090 MAILPIT_PORT=9025 docker compose up --build`.
+- Se le porte sono occupate: `WEB_PORT=9090 MAILPIT_PORT=9025 SWAGGER_PORT=9081 docker compose up --build`.
 
 > È una configurazione **solo per provare l'app**: chiave, password del database e admin sono quelli di prova, le
 > immagini includono le dipendenze di sviluppo (il seeder usa Faker) e il frontend è compilato in modalità
@@ -157,6 +175,13 @@ I test usano PostgreSQL con un database dedicato `testing` (vedi `phpunit.xml`).
 
 Autenticazione con cookie di sessione (Sanctum). Prima dei `POST` il client richiede il cookie CSRF a
 `GET /sanctum/csrf-cookie`. Le rotte hanno il prefisso `/api`.
+
+La specifica completa (parametri, corpi delle richieste, risposte ed errori) è in
+[`booking-api/openapi.yaml`](booking-api/openapi.yaml), scritta a mano e da tenere allineata al codice. Con Docker
+si legge in Swagger UI su <http://localhost:8081> (sola lettura: il pulsante "Try it out" è disattivato, perché
+il cookie di sessione non passa tra porte diverse).
+
+![Documentazione dell'API in Swagger UI](docs/screenshots/api-swagger.png)
 
 | Metodo | Percorso | Descrizione | Accesso |
 |---|---|---|---|

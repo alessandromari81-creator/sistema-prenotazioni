@@ -1,0 +1,730 @@
+openapi: 3.0.3
+
+info:
+  title: Sistema di prenotazioni - API
+  version: 1.0.0
+  description: |
+    API REST del sistema di prenotazioni (Laravel 13, Sanctum in modalità SPA).
+
+    ## Autenticazione
+    Non ci sono token Bearer: il browser tiene un **cookie di sessione**. Per le chiamate di scrittura (`POST`,
+    `PUT`, `DELETE`) serve anche la protezione CSRF:
+
+    1. `GET /sanctum/csrf-cookie` imposta il cookie `XSRF-TOKEN` (e la sessione).
+    2. Ogni richiesta successiva rimanda il valore di quel cookie nell'header `X-XSRF-TOKEN`.
+    3. `POST /api/login` apre la sessione; da quel momento le rotte protette rispondono.
+
+    La richiesta deve arrivare da un dominio "stateful" (`SANCTUM_STATEFUL_DOMAINS`): il frontend lo garantisce
+    mandando `Origin` o `Referer`.
+
+    ## Errori comuni
+    - `401` non autenticato: `{"message": "Non autenticato."}`
+    - `403` permesso negato (rotta riservata agli admin o prenotazione altrui)
+    - `404` risorsa inesistente
+    - `422` validazione fallita, con l'elenco `errors` per campo (anche per le regole di business)
+    - `429` troppe richieste, con `retry_after` in secondi e header `Retry-After`
+
+    ## Date e orari
+    Gli istanti delle prenotazioni sono in **UTC** (ISO 8601). Le fasce orarie (`day_of_week`, `start_time`,
+    `end_time`) sono invece nell'orario di Roma. `day_of_week`: 1 = lunedì ... 7 = domenica.
+
+    Questo file è scritto a mano: va aggiornato insieme al codice (`routes/api.php`, Form Request, Resource).
+
+servers:
+  - url: http://localhost:8080
+    description: Demo con Docker (nginx inoltra /api e /sanctum al backend)
+  - url: http://localhost:4200
+    description: Sviluppo (ng serve con proxy.conf.json)
+
+tags:
+  - name: Autenticazione
+    description: Registrazione in due passi, login, logout, utente corrente
+  - name: Risorse
+    description: Risorse prenotabili (sale, campi...). Scrittura solo per gli admin
+  - name: Fasce orarie
+    description: Quando una risorsa è prenotabile. Solo admin
+  - name: Prenotazioni
+    description: Slot liberi, elenco, creazione e annullamento
+
+security:
+  - sessionCookie: []
+
+paths:
+  /sanctum/csrf-cookie:
+    get:
+      tags: [Autenticazione]
+      summary: Imposta il cookie CSRF
+      description: Da chiamare prima di ogni scrittura. Risponde 204 e imposta `XSRF-TOKEN` e la sessione.
+      security: []
+      responses:
+        '204':
+          description: Cookie impostati.
+
+  /api/register:
+    post:
+      tags: [Autenticazione]
+      summary: Registrazione, passo 1
+      description: |
+        Salva i dati in `pending_registrations` (password già hashata) e mette in coda la mail con il link di
+        conferma. **Risponde sempre 202**, anche se l'email è già iscritta, per non rivelare chi è registrato.
+        Se la stessa email si registra più volte vince l'ultima richiesta e i link precedenti smettono di
+        funzionare. Serve il worker delle code, altrimenti la mail non parte.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '202':
+          description: Richiesta accolta (sempre la stessa risposta).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Controlla la tua email: se l'indirizzo è valido riceverai il link per confermare la registrazione."
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/register/confirm:
+    post:
+      tags: [Autenticazione]
+      summary: Registrazione, passo 2 (conferma)
+      description: |
+        Chiamata dalla pagina del frontend raggiunta dal link nella mail. Se il token è quello dell'ultima mail
+        e non è scaduto crea l'utente (email già verificata). È una POST e non un link diretto all'API, così
+        antivirus e anteprime delle mail non consumano il token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmRegistrationRequest'
+      responses:
+        '201':
+          description: Utente creato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: Registrazione confermata. Ora puoi effettuare il login.
+        '410':
+          description: Link non valido, scaduto o sostituito da una richiesta più recente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/login:
+    post:
+      tags: [Autenticazione]
+      summary: Login
+      description: Verifica le credenziali e apre la sessione (cookie). Limite di richieste per IP e per coppia email + IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sessione aperta. Restituisce l'utente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          description: Email non ancora verificata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Credenziali non valide (`errors.email`) o dati mancanti.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: Credenziali non valide.
+                errors:
+                  email: [Credenziali non valide.]
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/logout:
+    post:
+      tags: [Autenticazione]
+      summary: Logout
+      description: Chiude e invalida la sessione e rigenera il token CSRF.
+      responses:
+        '204':
+          description: Sessione chiusa.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /api/user:
+    get:
+      tags: [Autenticazione]
+      summary: Utente autenticato
+      description: Il frontend la chiama all'avvio per sapere se la sessione è valida.
+      responses:
+        '200':
+          description: L'utente corrente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /api/bookables:
+    get:
+      tags: [Risorse]
+      summary: Elenco delle risorse prenotabili
+      description: |
+        Paginato, con le fasce orarie incluse. Di default solo le risorse attive; l'admin può chiedere anche
+        quelle disattivate con `all=1`.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [name, created_at, slot_minutes], default: name }
+        - $ref: '#/components/parameters/SortDirection'
+        - name: search
+          in: query
+          description: Ricerca nel nome (contiene).
+          schema: { type: string, maxLength: 100 }
+        - name: all
+          in: query
+          description: Se `1` e l'utente è admin, include le risorse disattivate. Per gli altri è ignorato.
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Pagina di risorse.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookablePage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [Risorse]
+      summary: Crea una risorsa (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreBookableRequest'
+      responses:
+        '201':
+          description: Risorsa creata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookable'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/bookables/{bookable}:
+    parameters:
+      - $ref: '#/components/parameters/BookableId'
+    get:
+      tags: [Risorse]
+      summary: Dettaglio di una risorsa
+      description: Include le fasce orarie.
+      responses:
+        '200':
+          description: La risorsa.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookable'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Risorse]
+      summary: Modifica una risorsa (admin)
+      description: Si può inviare anche un solo campo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookableRequest'
+      responses:
+        '200':
+          description: La risorsa aggiornata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookable'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Risorse]
+      summary: Elimina una risorsa (admin)
+      description: Elimina anche le sue fasce orarie e le sue prenotazioni (cancellazione a cascata).
+      responses:
+        '204':
+          description: Eliminata.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/bookables/{bookable}/availabilities:
+    parameters:
+      - $ref: '#/components/parameters/BookableId'
+    post:
+      tags: [Fasce orarie]
+      summary: Aggiunge una fascia oraria (admin)
+      description: Fasce dello stesso giorno che si sovrappongono sono rifiutate (422). Fasce che si toccano sono ammesse.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreAvailabilityRequest'
+      responses:
+        '201':
+          description: Fascia creata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Availability'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/availabilities/{availability}:
+    delete:
+      tags: [Fasce orarie]
+      summary: Elimina una fascia oraria (admin)
+      description: Le prenotazioni già fatte restano; non si potranno più prenotare nuovi slot in quella fascia.
+      parameters:
+        - name: availability
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Eliminata.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/bookables/{bookable}/slots:
+    parameters:
+      - $ref: '#/components/parameters/BookableId'
+    get:
+      tags: [Prenotazioni]
+      summary: Slot liberi di una risorsa per un giorno
+      description: |
+        Calcola gli slot dalle fasce orarie (orario di Roma) e toglie quelli già prenotati o nel passato.
+        Gli istanti restituiti sono in UTC.
+      parameters:
+        - name: date
+          in: query
+          required: true
+          description: Giorno richiesto, da oggi in poi.
+          schema: { type: string, format: date, example: '2026-11-20' }
+      responses:
+        '200':
+          description: Elenco (anche vuoto) degli slot liberi.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Slot'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/bookings:
+    get:
+      tags: [Prenotazioni]
+      summary: Elenco delle prenotazioni
+      description: L'utente vede solo le proprie prenotazioni, l'admin tutte. Include risorsa e utente.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: per_page
+          in: query
+          schema: { type: integer, enum: [5, 10, 15, 20, 50], default: 10 }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [starts_at, created_at], default: starts_at }
+        - $ref: '#/components/parameters/SortDirection'
+        - name: search
+          in: query
+          description: Nome della risorsa; per l'admin anche nome dell'utente.
+          schema: { type: string, maxLength: 100 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [confirmed, cancelled] }
+      responses:
+        '200':
+          description: Pagina di prenotazioni.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingPage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [Prenotazioni]
+      summary: Crea una prenotazione
+      description: |
+        Si indicano la risorsa e l'inizio; la fine si ricava dalla durata dello slot. Avviene in una transazione
+        con lock sulla risorsa. Errori 422 possibili: risorsa non prenotabile, orario fuori dalla disponibilità,
+        orario che non coincide con l'inizio di uno slot, slot già prenotato. Dopo il salvataggio l'utente
+        riceve una notifica.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreBookingRequest'
+      responses:
+        '201':
+          description: Prenotazione creata (stato `confirmed`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/bookings/{booking}:
+    delete:
+      tags: [Prenotazioni]
+      summary: Annulla una prenotazione
+      description: |
+        Non la cancella: imposta lo stato `cancelled`. Può farlo il proprietario o un admin; l'utente normale solo
+        fino a 2 ore prima dell'inizio. Risponde 422 se è già annullata o se mancano meno di 2 ore.
+      parameters:
+        - name: booking
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: La prenotazione annullata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: laravel_session
+      description: |
+        Cookie di sessione impostato dal login. Il nome reale dipende da `APP_NAME` (di solito
+        `<nome-app>-session`). Le scritture richiedono anche l'header `X-XSRF-TOKEN`.
+
+  parameters:
+    BookableId:
+      name: bookable
+      in: path
+      required: true
+      schema: { type: integer }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    SortDirection:
+      name: sort_direction
+      in: query
+      schema: { type: string, enum: [asc, desc], default: asc }
+
+  responses:
+    Unauthenticated:
+      description: Non autenticato.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Message'
+          example:
+            message: Non autenticato.
+    Forbidden:
+      description: Permesso negato (rotta per soli admin o prenotazione di un altro utente).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Message'
+          example:
+            message: This action is unauthorized.
+    NotFound:
+      description: Risorsa inesistente.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Message'
+    ValidationError:
+      description: Validazione fallita (formato dei dati o regola di business).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          example:
+            message: Lo slot è già stato prenotato.
+            errors:
+              starts_at: [Lo slot è già stato prenotato.]
+    TooManyRequests:
+      description: Troppe richieste. L'header `Retry-After` indica i secondi da attendere.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TooManyRequestsBody'
+          example:
+            message: Troppe richieste. Riprova tra qualche istante.
+            retry_after: 59
+
+  schemas:
+    Message:
+      type: object
+      properties:
+        message: { type: string }
+
+    ValidationError:
+      type: object
+      properties:
+        message: { type: string }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+
+    TooManyRequestsBody:
+      type: object
+      properties:
+        message: { type: string }
+        retry_after: { type: integer, description: Secondi da attendere. }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+        address: { type: string, nullable: true }
+        role: { type: string, enum: [user, admin] }
+
+    Availability:
+      type: object
+      properties:
+        id: { type: integer }
+        bookable_id: { type: integer }
+        day_of_week: { type: integer, minimum: 1, maximum: 7, description: 1 = lunedì ... 7 = domenica }
+        start_time: { type: string, example: '09:00:00', description: 'Orario di Roma (HH:MM:SS).' }
+        end_time: { type: string, example: '13:00:00', description: 'Orario di Roma (HH:MM:SS).' }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    Bookable:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        slot_minutes: { type: integer, description: Durata di uno slot in minuti. }
+        is_active: { type: boolean }
+        availabilities:
+          type: array
+          description: Presente solo quando le fasce sono state caricate (elenco e dettaglio; non dopo creazione o modifica).
+          items:
+            $ref: '#/components/schemas/Availability'
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    Booking:
+      type: object
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        bookable_id: { type: integer }
+        starts_at: { type: string, format: date-time, description: Inizio in UTC. }
+        ends_at: { type: string, format: date-time, description: Fine in UTC. }
+        status: { type: string, enum: [confirmed, cancelled] }
+        notes: { type: string, nullable: true }
+        bookable:
+          description: Presente nell'elenco; dopo creazione e annullamento solo se già caricata.
+          allOf:
+            - $ref: '#/components/schemas/Bookable'
+        user:
+          description: Presente nell'elenco.
+          allOf:
+            - $ref: '#/components/schemas/User'
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    Slot:
+      type: object
+      properties:
+        starts_at: { type: string, format: date-time, example: '2026-11-20T08:00:00+00:00' }
+        ends_at: { type: string, format: date-time, example: '2026-11-20T09:00:00+00:00' }
+
+    PaginationLink:
+      type: object
+      properties:
+        url: { type: string, nullable: true }
+        label: { type: string }
+        active: { type: boolean }
+
+    Pagination:
+      type: object
+      description: Forma standard del paginatore di Laravel (senza il wrapper `data`/`meta` delle Resource).
+      properties:
+        current_page: { type: integer }
+        first_page_url: { type: string }
+        from: { type: integer, nullable: true }
+        last_page: { type: integer }
+        last_page_url: { type: string }
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaginationLink'
+        next_page_url: { type: string, nullable: true }
+        path: { type: string }
+        per_page: { type: integer }
+        prev_page_url: { type: string, nullable: true }
+        to: { type: integer, nullable: true }
+        total: { type: integer }
+
+    BookablePage:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Bookable'
+
+    BookingPage:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Booking'
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password, address]
+      properties:
+        name: { type: string, maxLength: 255 }
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, format: password, minLength: 8, maxLength: 255 }
+        address: { type: string, maxLength: 255 }
+
+    ConfirmRegistrationRequest:
+      type: object
+      required: [email, token]
+      properties:
+        email: { type: string, format: email, maxLength: 255 }
+        token: { type: string, minLength: 64, maxLength: 64, description: Token ricevuto nel link della mail. }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+
+    StoreBookableRequest:
+      type: object
+      required: [name, slot_minutes]
+      properties:
+        name: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true }
+        slot_minutes: { type: integer, minimum: 5, maximum: 480 }
+        is_active: { type: boolean }
+
+    UpdateBookableRequest:
+      type: object
+      description: Tutti i campi sono facoltativi.
+      properties:
+        name: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true }
+        slot_minutes: { type: integer, minimum: 5, maximum: 480 }
+        is_active: { type: boolean }
+
+    StoreAvailabilityRequest:
+      type: object
+      required: [day_of_week, start_time, end_time]
+      properties:
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        start_time: { type: string, example: '09:00', description: 'Formato HH:MM.' }
+        end_time: { type: string, example: '13:00', description: 'Formato HH:MM, dopo start_time.' }
+
+    StoreBookingRequest:
+      type: object
+      required: [bookable_id, starts_at]
+      properties:
+        bookable_id: { type: integer }
+        starts_at: { type: string, format: date-time, description: 'Inizio dello slot (UTC), nel futuro.' }

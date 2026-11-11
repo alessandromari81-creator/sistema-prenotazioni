@@ -1,7 +1,8 @@
 # Avvio dell'intera applicazione per provarla:   docker compose up --build
 #   Frontend:  http://localhost:8080      Email di prova (Mailpit):  http://localhost:8025
+#   Documentazione API (Swagger UI):  http://localhost:8081
 #
-# Le porte si cambiano con le variabili WEB_PORT e MAILPIT_PORT, ad esempio:
+# Le porte si cambiano con le variabili WEB_PORT, MAILPIT_PORT e SWAGGER_PORT, ad esempio:
 #   WEB_PORT=9090 docker compose up --build
 #
 # ATTENZIONE: la chiave dell'app e la password del database qui sotto, e l'admin creato dal seeder
@@ -104,6 +105,18 @@ services:
       app:
         condition: service_healthy
     restart: unless-stopped
+
+  # Documentazione dell'API (Swagger UI) generata da booking-api/openapi.yaml, solo da leggere:
+  # il pulsante "Try it out" non funziona perché il cookie di sessione non passa tra porte diverse
+  swagger:
+    image: swaggerapi/swagger-ui:latest
+    environment:
+      SWAGGER_JSON: /spec/openapi.yaml
+      SUPPORTED_SUBMIT_METHODS: "[]"
+    volumes:
+      - ./booking-api/openapi.yaml:/spec/openapi.yaml:ro
+    ports:
+      - "${SWAGGER_PORT:-8081}:8080"
 
   # Frontend Angular compilato, servito da nginx; inoltra /api e /sanctum al backend
   web:
