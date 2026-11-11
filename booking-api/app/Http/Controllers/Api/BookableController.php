@@ -9,11 +9,15 @@ use App\Http\Requests\StoreBookableRequest;
 use App\Http\Requests\UpdateBookableRequest;
 use App\Http\Resources\BookableResource;
 use App\Models\Bookable;
+use App\Services\SlotService;
 use Illuminate\Http\JsonResponse;   // tipo di risposta JSON restituita dalle API
-use Illuminate\Support\Carbon;   // gestione delle date
 
 class BookableController extends Controller
 {
+    public function __construct(private readonly SlotService $slots)
+    {
+    }
+
     /**
      * Restituisce l'elenco delle risorse prenotabili con i propri orari di disponibilità.
      * Di default solo quelle attive; l'admin può chiedere anche le disattivate con ?all=1.
@@ -115,58 +119,9 @@ class BookableController extends Controller
      */
     public function slots(SlotsRequest $request, Bookable $bookable): JsonResponse
     {
-        $data = $request->validated();
-
-        // Le disponibilità sono espresse nell'orario di Roma
-        $timezoneUser = config('timezone.default');
-
-        $date = Carbon::createFromFormat(
-            '!Y-m-d',
-            $data['date'],
-            $timezoneUser
+        // Il calcolo (fasce orarie meno prenotazioni e orari passati) sta nel servizio
+        return response()->json(
+            $this->slots->freeSlots($bookable, $request->validated()['date'])
         );
-
-        // Fasce orarie della risorsa
-        $windows = $bookable->availabilities()
-            ->where('day_of_week', $date->dayOfWeekIso)
-            ->orderBy('start_time')
-            ->get();
-
-        // Limiti della giornata convertiti in UTC per interrogare le prenotazioni
-        $dayStartUtc = $date->copy()->startOfDay()->utc();
-        $dayEndUtc = $date->copy()->endOfDay()->utc();
-
-        $booked = $bookable->bookings()
-            ->where('status', '!=', 'cancelled')
-            ->where('starts_at', '<', $dayEndUtc)
-            ->where('ends_at', '>', $dayStartUtc)
-            ->get();
-
-        $slots = [];
-
-        foreach ($windows as $window) {
-            $cursor = $date->copy()->setTimeFromTimeString($window->start_time);
-            $windowEnd = $date->copy()->setTimeFromTimeString($window->end_time);
-
-            while ($cursor->copy()->addMinutes($bookable->slot_minutes) <= $windowEnd) {
-                $slotEnd = $cursor->copy()->addMinutes($bookable->slot_minutes);
-
-                $taken = $booked->contains(
-                    fn ($b) => $b->starts_at < $slotEnd->copy()->utc()
-                        && $b->ends_at > $cursor->copy()->utc()
-                );
-
-                if (! $taken && $cursor->isFuture()) {
-                    $slots[] = [
-                        'starts_at' => $cursor->copy()->utc()->toIso8601String(),
-                        'ends_at' => $slotEnd->copy()->utc()->toIso8601String(),
-                    ];
-                }
-
-                $cursor = $slotEnd;
-            }
-        }
-
-        return response()->json($slots);
     }
 }
