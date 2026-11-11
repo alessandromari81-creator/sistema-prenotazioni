@@ -1,0 +1,8 @@
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# File personali: appunti di studio e istruzioni per l'assistente, non vanno nella repository
+CLAUDE.md
+booking-api/docs/

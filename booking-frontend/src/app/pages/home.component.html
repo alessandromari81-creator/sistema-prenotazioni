@@ -1,0 +1,80 @@
+<!-- Intestazione con i pulsanti principali -->
+    <section class="hero">
+      <h1>Sistema di prenotazioni</h1>
+      <p class="lead">
+        Un'applicazione web per prenotare risorse (sale, campi, postazioni) scegliendo
+        il giorno e un orario tra quelli realmente liberi.
+      </p>
+
+      <div class="hero-actions">
+        @if (auth.user()) {
+          <a mat-flat-button routerLink="/bookables">Vai alle risorse</a>
+          <a mat-stroked-button routerLink="/my-bookings">Le mie prenotazioni</a>
+        } @else {
+          <a mat-flat-button routerLink="/login">Accedi</a>
+          <a mat-stroked-button routerLink="/register">Registrati</a>
+        }
+      </div>
+    </section>
+
+    <h2>Cosa puoi fare</h2>
+    <div class="grid">
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>event_available</mat-icon>
+          <mat-card-title>Prenotare in pochi click</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          Scegli la risorsa, seleziona la data dal calendario e prenota uno degli
+          orari disponibili. Ricevi una email di conferma.
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>event_note</mat-icon>
+          <mat-card-title>Gestire le tue prenotazioni</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          Consulta lo storico e annulla una prenotazione fino a 2 ore prima
+          dell'inizio.
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>admin_panel_settings</mat-icon>
+          <mat-card-title>Area amministratore</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          L'admin crea e modifica le risorse e ne definisce le fasce orarie
+          settimanali, senza sovrapposizioni.
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>lock_clock</mat-icon>
+          <mat-card-title>Niente doppie prenotazioni</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          Il server controlla ogni richiesta e blocca la risorsa durante la
+          prenotazione: due persone non possono occupare lo stesso slot.
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <h2>Com'è fatto</h2>
+    <p>
+      Progetto dimostrativo realizzato per il mio portfolio: un'API REST con
+      autenticazione a cookie e un'interfaccia a pagina singola.
+    </p>
+    <div class="tags">
+      <span class="tag">Laravel</span>
+      <span class="tag">Laravel Sanctum</span>
+      <span class="tag">PostgreSQL</span>
+      <span class="tag">Docker / Sail</span>
+      <span class="tag">Angular</span>
+      <span class="tag">Angular Material</span>
+      <span class="tag">PHPUnit</span>
+    </div>

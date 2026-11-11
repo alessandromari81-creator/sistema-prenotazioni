@@ -1,0 +1,12 @@
+{
+  "/api": {
+    "target": "http://localhost",
+    "secure": false,
+    "headers": { "Origin": "http://localhost:4200" }
+  },
+  "/sanctum": {
+    "target": "http://localhost",
+    "secure": false,
+    "headers": { "Origin": "http://localhost:4200" }
+  }
+}

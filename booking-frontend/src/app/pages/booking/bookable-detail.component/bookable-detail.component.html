@@ -1,0 +1,75 @@
+<!-- Link per tornare all'elenco -->
+<a mat-button routerLink="/bookables">← Tutte le risorse</a>
+
+<mat-card appearance="outlined" class="detail-card">
+  <mat-card-header>
+    <mat-card-title>{{ bookable()?.name }}</mat-card-title>
+    <mat-card-subtitle>{{ bookable()?.description }}</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Selettore data: si apre solo con l'icona del calendario.
+         readonly impedisce di scrivere a mano una data non valida. -->
+    <mat-form-field appearance="outline" class="date-field">
+      <mat-label>Data</mat-label>
+      <input matInput
+             [matDatepicker]="picker"
+             [min]="minDate"
+             [value]="dateObj()"
+             (dateChange)="onPickerChange($event.value)"
+             readonly />
+      <mat-datepicker-toggle matIconSuffix [for]="picker" />
+      <mat-datepicker #picker />
+    </mat-form-field>
+
+    <h3>Orari disponibili</h3>
+    <!-- RIGA TEMPORANEA DI DEBUG: poi la togliamo -->
+<p style="background:#fff3cd;padding:8px">
+  slots: {{ slots().length }} | loading: {{ loading() }} | error: {{ error() }} | date: {{ date() }}
+</p>
+
+    <!-- Errore di caricamento -->
+    @if (error()) {
+      <p class="error-text">{{ error() }}</p>
+    }
+
+    @if (loading()) {
+      <mat-spinner diameter="36" />
+    } @else {
+
+      <!-- Messaggio fuori dall'elenco: compare se non ci sono slot -->
+      @if (slots().length === 0 && !error()) {
+        <p class="muted">Nessuno slot libero in questa data.</p>
+      }
+
+      <!-- Un bottone per ogni slot. Quello scelto è "pieno", gli altri "con bordo".
+           Cliccando di nuovo lo slot scelto, la scelta si annulla. -->
+      <div class="slots">
+        @for (s of slots(); track s.starts_at) {
+          @if (selected()?.starts_at === s.starts_at) {
+            <button mat-flat-button (click)="select(null)">
+              {{ s.starts_at | date:'HH:mm' }}
+            </button>
+          } @else {
+            <button mat-stroked-button (click)="select(s)">
+              {{ s.starts_at | date:'HH:mm' }}
+            </button>
+          }
+        }
+      </div>
+    }
+
+    <!-- Riepilogo della scelta -->
+    @if (selected(); as s) {
+      <p class="summary">
+        Hai scelto: <strong>{{ s.starts_at | date:'EEEE d MMMM, HH:mm' }}</strong>
+      </p>
+    }
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    <button mat-flat-button [disabled]="!selected() || saving()" (click)="confirm()">
+      {{ saving() ? 'Prenotazione...' : 'Conferma prenotazione' }}
+    </button>
+  </mat-card-actions>
+</mat-card>

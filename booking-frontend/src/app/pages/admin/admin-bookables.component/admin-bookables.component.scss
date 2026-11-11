@@ -1,0 +1,12 @@
+.row-actions { text-align: right; white-space: nowrap; }
+
+.table-filters {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+
+  mat-form-field {
+    min-width: 250px;
+  }
+}

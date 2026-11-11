@@ -1,0 +1,40 @@
+ <p><a routerLink="/admin/bookables">&larr; Torna alle risorse</a></p>
+
+    @if (loading()) { <p>Caricamento...</p> }
+
+    @if (bookable(); as b) {
+      <h2>Orari di "{{ b.name }}"</h2>
+      <p>Slot da {{ b.slot_minutes }} minuti.</p>
+
+      <h3>Fasce attuali</h3>
+      @for (day of grouped(); track day.n) {
+        <div class="day">
+          <strong>{{ day.label }}</strong>
+          @if (day.items.length === 0) {
+            <span class="none">nessuna fascia</span>
+          }
+          @for (a of day.items; track a.id) {
+            <span class="window">
+              {{ a.start_time.slice(0, 5) }} – {{ a.end_time.slice(0, 5) }}
+              <button type="button" (click)="remove(a)" aria-label="Elimina fascia">✕</button>
+            </span>
+          }
+        </div>
+      }
+
+      <h3>Aggiungi una fascia</h3>
+      <form [formGroup]="form" (ngSubmit)="add()">
+        <label>Giorno
+          <select formControlName="day_of_week">
+            @for (d of days; track d.n) {
+              <option [ngValue]="d.n">{{ d.label }}</option>
+            }
+          </select>
+        </label>
+        <label>Dalle <input type="time" formControlName="start_time" /></label>
+        <label>Alle <input type="time" formControlName="end_time" /></label>
+        <button type="submit" [disabled]="form.invalid || saving()">Aggiungi</button>
+      </form>
+    }
+
+    @if (error()) { <p class="error">{{ error() }}</p> }

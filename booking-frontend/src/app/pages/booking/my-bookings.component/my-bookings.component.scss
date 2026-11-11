@@ -1,0 +1,7 @@
+/* Etichetta di stato */
+.status { font-weight: 600; }
+.status-confirmed { color: #2e7d32; }                  /* verde */
+.status-cancelled { color: var(--mat-sys-error); }     /* colore di errore del tema */
+
+/* Le righe annullate sono attenuate */
+.row-cancelled td { opacity: .55; }

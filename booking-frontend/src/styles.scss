@@ -1,0 +1,68 @@
+/* ==========================================================
+   TEMA GLOBALE - Angular Material (Material 3)
+   ========================================================== */
+@use '@angular/material' as mat;
+
+/* mat.theme genera tutte le variabili CSS del tema (--mat-sys-*).
+   - color: palette di base (primary + tertiary). Altre palette disponibili:
+     $azure, $blue, $cyan, $green, $orange, $rose, $magenta, $red, $yellow...
+   - typography: famiglia di font
+   - density: 0 = normale, -1/-2/... = componenti più compatti */
+html {
+  color-scheme: light;
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,    /* colore principale: bottoni, menu, selezioni */
+      tertiary: mat.$cyan-palette,    /* colore secondario: accenti, evidenziazioni */
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+/* Reset minimo: niente margini del browser, sfondo dal tema */
+body {
+  margin: 0;
+  background: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* Contenitore centrato per il contenuto delle pagine */
+.container {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* Intestazione di pagina: titolo a sinistra, azioni a destra */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-bottom: 1.25rem;
+}
+.page-header h1 { margin: 0; }
+
+.muted { color: var(--mat-sys-on-surface-variant); }
+
+/* Griglia responsiva di card */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+/* Form che occupano tutta la larghezza disponibile */
+.full-width { width: 100%; }
+.form-card { max-width: 440px; margin: 2rem auto; }
+.form-actions { display: flex; gap: .5rem; margin-top: 1rem; }
+
+/* Stato vuoto */
+.empty { text-align: center; padding: 2.5rem 1rem; color: var(--mat-sys-on-surface-variant); }
+
+/* Tabelle Material: scroll orizzontale su schermi stretti */
+.table-wrap { overflow-x: auto; }
+table.mat-mdc-table { width: 100%; }

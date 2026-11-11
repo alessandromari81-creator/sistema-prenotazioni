@@ -1,0 +1,141 @@
+<a class="skip-link" href="#main-content">
+  Salta al contenuto principale
+</a>
+
+<mat-sidenav-container class="layout">
+
+  <mat-sidenav
+    #drawer
+    mode="over"
+    class="drawer"
+    role="navigation"
+    aria-label="Menu principale"
+  >
+    <div class="drawer-header">
+      <mat-icon aria-hidden="true">event_available</mat-icon>
+      <span>{{ appTitle }}</span>
+    </div>
+
+    <mat-divider />
+
+    <mat-nav-list>
+
+      <a
+        mat-list-item
+        routerLink="/"
+        routerLinkActive="active-item"
+        [routerLinkActiveOptions]="{ exact: true }"
+        (click)="drawer.close()"
+      >
+        <mat-icon matListItemIcon aria-hidden="true">info</mat-icon>
+        <span matListItemTitle>Il progetto</span>
+      </a>
+
+      @if (auth.user()) {
+        <a
+          mat-list-item
+          routerLink="/bookables"
+          routerLinkActive="active-item"
+          (click)="drawer.close()"
+        >
+          <mat-icon matListItemIcon aria-hidden="true">meeting_room</mat-icon>
+          <span matListItemTitle>Risorse</span>
+        </a>
+
+        <a
+          mat-list-item
+          routerLink="/my-bookings"
+          routerLinkActive="active-item"
+          (click)="drawer.close()"
+        >
+          <mat-icon matListItemIcon aria-hidden="true">event_note</mat-icon>
+          <span matListItemTitle>Le mie prenotazioni</span>
+        </a>
+
+        @if (auth.isAdmin()) {
+          <mat-divider />
+
+          <h3 matSubheader>Amministrazione</h3>
+
+          <a
+            mat-list-item
+            routerLink="/admin/bookables"
+            routerLinkActive="active-item"
+            (click)="drawer.close()"
+          >
+            <mat-icon matListItemIcon aria-hidden="true">
+              admin_panel_settings
+            </mat-icon>
+            <span matListItemTitle>Gestione risorse</span>
+          </a>
+        }
+
+        <mat-divider />
+
+        <button mat-list-item type="button" (click)="logout()">
+          <mat-icon matListItemIcon aria-hidden="true">logout</mat-icon>
+          <span matListItemTitle>Esci</span>
+        </button>
+
+      } @else {
+        <mat-divider />
+
+        <a mat-list-item routerLink="/login" (click)="drawer.close()">
+          <mat-icon matListItemIcon aria-hidden="true">login</mat-icon>
+          <span matListItemTitle>Accedi</span>
+        </a>
+
+        <a mat-list-item routerLink="/register" (click)="drawer.close()">
+          <mat-icon matListItemIcon aria-hidden="true">person_add</mat-icon>
+          <span matListItemTitle>Registrati</span>
+        </a>
+      }
+
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+
+    <mat-toolbar class="top-bar">
+
+      <button
+        mat-icon-button
+        type="button"
+        aria-label="Apri il menu principale"
+        (click)="drawer.toggle()"
+      >
+        <mat-icon aria-hidden="true">menu</mat-icon>
+      </button>
+
+      <a routerLink="/" class="title">
+        {{ appTitle }}
+      </a>
+
+      <div class="right">
+        @if (auth.user()) {
+          <span class="user-name">{{ auth.user()?.name }}</span>
+
+          <button
+            mat-icon-button
+            type="button"
+            aria-label="Esci dall'applicazione"
+            (click)="logout()"
+          >
+            <mat-icon aria-hidden="true">logout</mat-icon>
+          </button>
+        } @else {
+          <a mat-flat-button routerLink="/login">
+            Accedi
+          </a>
+        }
+      </div>
+
+    </mat-toolbar>
+
+    <main class="container" id="main-content" tabindex="-1">
+      <router-outlet />
+    </main>
+
+  </mat-sidenav-content>
+
+</mat-sidenav-container>

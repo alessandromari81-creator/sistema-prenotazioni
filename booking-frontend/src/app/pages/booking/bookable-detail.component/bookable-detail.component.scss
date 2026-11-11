@@ -1,0 +1,18 @@
+/* Card più stretta e centrata */
+.detail-card { max-width: 640px; margin: 1rem auto; }
+
+/* Larghezza fissa del campo data */
+.date-field { width: 220px; }
+
+/* Griglia dei bottoni orario: vanno a capo da soli */
+.slots {
+  display: flex;
+  flex-wrap: wrap;   /* se non c'è spazio, il bottone va alla riga sotto */
+  gap: .5rem;        /* spazio tra i bottoni */
+  margin: .5rem 0 1rem;
+}
+
+/* Errore con il colore di errore del tema */
+.error-text { color: var(--mat-sys-error); }
+
+.summary { margin-top: 1rem; }

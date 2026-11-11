@@ -1,0 +1,8 @@
+/* Messaggio di errore del server, con il colore di errore del tema */
+.login-error {
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+/* Riga con i link in fondo alla card di login */
+.login-links { padding: 0 1rem 1rem; }

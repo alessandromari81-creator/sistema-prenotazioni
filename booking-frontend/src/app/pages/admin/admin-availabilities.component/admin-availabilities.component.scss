@@ -1,0 +1,7 @@
+ .block { margin-bottom: 1rem; }
+    .day { display: flex; align-items: center; gap: 1rem; padding: .5rem 0;
+           border-bottom: 1px solid var(--mat-sys-outline-variant); flex-wrap: wrap; }
+    .day:last-child { border-bottom: none; }
+    .day-name { width: 7rem; }
+    .add-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; padding-top: 1rem; }
+    .error-text { color: var(--mat-sys-error); }

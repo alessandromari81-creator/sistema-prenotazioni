@@ -1,0 +1,112 @@
+
+  <header class="page-header">
+    <h1>Risorse prenotabili</h1>
+    <p>Scegli una risorsa e prenota il tuo orario.</p>
+  </header>
+
+  <section aria-label="Ricerca e ordinamento delle risorse">
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cerca risorsa</mat-label>
+      <input
+        matInput
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+        (keyup.enter)="page.set(0); loadBookables()"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ordina per</mat-label>
+      <mat-select
+        [value]="sortBy()"
+        (selectionChange)="sortBy.set($event.value); page.set(0); loadBookables()"
+      >
+        <mat-option value="name">Nome</mat-option>
+        <mat-option value="created_at">Data creazione</mat-option>
+        <mat-option value="slot_minutes">Durata slot</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Direzione ordinamento</mat-label>
+      <mat-select
+        [value]="sortDirection()"
+        (selectionChange)="sortDirection.set($event.value); page.set(0); loadBookables()"
+      >
+        <mat-option value="asc">Crescente</mat-option>
+        <mat-option value="desc">Decrescente</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button
+      mat-flat-button
+      type="button"
+      (click)="page.set(0); loadBookables()"
+    >
+      Cerca
+    </button>
+
+  </section>
+
+  <section aria-label="Elenco delle risorse prenotabili">
+
+    @if (loading()) {
+      <p role="status" aria-live="polite">Caricamento risorse...</p>
+    }
+
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+
+    @if (!loading() && bookables().length) {
+      <div class="grid">
+        @for (b of bookables(); track b.id) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>
+                {{ b.name }}
+              </mat-card-title>
+
+              <mat-card-subtitle>
+                Durata slot: {{ b.slot_minutes }} minuti
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              @if (b.description) {
+                <p>{{ b.description }}</p>
+              } @else {
+                <p>Descrizione non disponibile.</p>
+              }
+            </mat-card-content>
+
+            <mat-card-actions align="end">
+              <a
+                mat-flat-button
+                [routerLink]="['/bookables', b.id]"
+                [attr.aria-label]="'Prenota ' + b.name"
+              >
+                Prenota
+              </a>
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+
+      <mat-paginator
+        [length]="total()"
+        [pageIndex]="page()"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="[2, 5, 10]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons
+        aria-label="Paginazione delle risorse"
+      />
+    }
+
+    @if (!loading() && !bookables().length && !error()) {
+      <p role="status">Nessuna risorsa disponibile.</p>
+    }
+
+  </section>
