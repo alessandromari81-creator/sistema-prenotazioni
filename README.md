@@ -173,7 +173,8 @@ cd booking-api
 ./vendor/bin/sail artisan test
 ```
 
-I test usano PostgreSQL con un database dedicato `testing` (vedi `phpunit.xml`).
+I test usano PostgreSQL con un database dedicato `testing` (vedi `phpunit.xml`). Sono 95: le rotte dell'API, i
+servizi (`app/Services`) e il repository delle prenotazioni, provati anche direttamente senza passare da HTTP.
 
 ## API
 
