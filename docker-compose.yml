@@ -1,8 +1,9 @@
 # Avvio dell'intera applicazione per provarla:   docker compose up --build
 #   Frontend:  http://localhost:8080      Email di prova (Mailpit):  http://localhost:8025
 #   Documentazione API (Swagger UI):  http://localhost:8081
+#   Database (DBeaver, psql):  localhost:5433, database/utente/password "booking"
 #
-# Le porte si cambiano con le variabili WEB_PORT, MAILPIT_PORT e SWAGGER_PORT, ad esempio:
+# Le porte si cambiano con le variabili WEB_PORT, MAILPIT_PORT, SWAGGER_PORT e DB_PORT, ad esempio:
 #   WEB_PORT=9090 docker compose up --build
 #
 # ATTENZIONE: la chiave dell'app e la password del database qui sotto, e l'admin creato dal seeder
@@ -46,6 +47,10 @@ services:
       POSTGRES_DB: booking
       POSTGRES_USER: booking
       POSTGRES_PASSWORD: booking
+    # Porta esposta solo sul proprio computer (127.0.0.1, non sulla rete) per guardare il database con DBeaver
+    # o psql. Usa 5433 per non scontrarsi con il Postgres di Sail (5432); si cambia con DB_PORT.
+    ports:
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

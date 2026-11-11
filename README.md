@@ -92,13 +92,17 @@ La prima volta costruisce le immagini (qualche minuto). Poi:
 | Applicazione | <http://localhost:8080> |
 | Email di prova (Mailpit) | <http://localhost:8025> |
 | Documentazione dell'API (Swagger UI) | <http://localhost:8081> |
+| Database PostgreSQL | `localhost:5433` (solo dal tuo computer) |
 
 - Entra come admin con `admin@example.com` / `password`, oppure registrati: la mail di conferma si legge su Mailpit.
 - Parte tutto da solo: il frontend compilato (nginx, che inoltra `/api` e `/sanctum` al backend), Laravel con
   FrankenPHP, il worker delle email, lo scheduler, Postgres, Mailpit e Swagger UI. Migrazioni e dati di prova vengono
   eseguiti al primo avvio.
+- Per guardare il database (DBeaver, TablePlus, `psql`): host `localhost`, porta `5433`, database `booking`,
+  utente `booking`, password `booking`. La porta è aperta solo sul tuo computer, non sulla rete.
+- I dati restano nel volume `db-data`: sopravvivono a riavvii e a `docker compose up --build`.
 - `docker compose down` ferma tutto e conserva i dati; `docker compose down -v` cancella anche il database.
-- Se le porte sono occupate: `WEB_PORT=9090 MAILPIT_PORT=9025 SWAGGER_PORT=9081 docker compose up --build`.
+- Se le porte sono occupate: `WEB_PORT=9090 MAILPIT_PORT=9025 SWAGGER_PORT=9081 DB_PORT=9433 docker compose up --build`.
 
 > È una configurazione **solo per provare l'app**: chiave, password del database e admin sono quelli di prova, le
 > immagini includono le dipendenze di sviluppo (il seeder usa Faker) e il frontend è compilato in modalità
