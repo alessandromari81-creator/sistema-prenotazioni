@@ -258,7 +258,7 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 # Backend: 295 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
-# Frontend: 184 test (Vitest + axe-core)
+# Frontend: 205 test (Vitest + axe-core)
 cd booking-frontend && ng test --watch=false
 ```
 
