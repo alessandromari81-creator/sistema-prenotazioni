@@ -12,7 +12,6 @@ function fakeKeycloak(overrides: Record<string, unknown> = {}) {
     init: vi.fn().mockResolvedValue(false),
     login: vi.fn().mockResolvedValue(undefined),
     register: vi.fn().mockResolvedValue(undefined),
-    accountManagement: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     updateToken: vi.fn().mockResolvedValue(true),
     ...overrides,
@@ -99,13 +98,41 @@ describe('AuthService', () => {
     expect(keycloak.register).toHaveBeenCalledWith({ redirectUri: `${window.location.origin}/`, locale: 'it' });
   });
 
-  it('apre la gestione dell\'account di Keycloak (nome, email, password)', async () => {
+  it('cambiare la password chiede a Keycloak solo l\'azione "nuova password" e poi torna al profilo', async () => {
     const keycloak = fakeKeycloak();
     const service = setup(keycloak);
 
-    await service.manageAccount();
+    await service.changePassword();
 
-    expect(keycloak.accountManagement).toHaveBeenCalled();
+    expect(keycloak.login).toHaveBeenCalledWith({ action: 'UPDATE_PASSWORD', redirectUri: `${window.location.origin}/profile`, locale: 'it' });
+  });
+
+  it('modificare il nome chiede a Keycloak solo l\'azione "aggiorna profilo" e poi torna al profilo', async () => {
+    const keycloak = fakeKeycloak();
+    const service = setup(keycloak);
+
+    await service.editName();
+
+    expect(keycloak.login).toHaveBeenCalledWith({ action: 'UPDATE_PROFILE', redirectUri: `${window.location.origin}/profile`, locale: 'it' });
+  });
+
+  it('non c\'è nessun esito finché non si torna da un\'azione di Keycloak', async () => {
+    const service = setup(fakeKeycloak());
+
+    await service.init();
+
+    expect(service.actionResult()).toBeNull();
+  });
+
+  it('quando si torna da un\'azione di Keycloak ne registra l\'esito', async () => {
+    const keycloak = fakeKeycloak();
+    const service = setup(keycloak);
+    await service.init();
+
+    // keycloak-js chiama questa funzione quando l'indirizzo di ritorno contiene l'esito dell'azione
+    (keycloak as unknown as { onActionUpdate: (status: string, action?: string) => void }).onActionUpdate('success', 'UPDATE_PASSWORD');
+
+    expect(service.actionResult()).toEqual({ status: 'success', action: 'UPDATE_PASSWORD' });
   });
 
   it('il logout azzera l\'utente e chiude la sessione su Keycloak', async () => {

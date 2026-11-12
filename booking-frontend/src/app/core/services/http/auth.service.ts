@@ -34,11 +34,20 @@ export class AuthService {
   readonly teachesCourses = computed(() => this.user()?.teaches_courses === true);
 
   /**
+   * L'esito dell'ultima azione chiesta a Keycloak (cambio password, modifica del nome), quando si torna da lì:
+   * "success", "cancelled" oppure "error". Resta null se non c'è stata nessuna azione.
+   */
+  readonly actionResult = signal<{ status: string; action?: string } | null>(null);
+
+  /**
    * Eseguita all'avvio dell'app, prima di mostrare qualsiasi pagina. Controlla se l'utente ha già una sessione
    * su Keycloak (o se sta tornando dalla pagina di accesso) e, se sì, carica il suo profilo.
    * Se Keycloak non risponde l'app parte comunque, come se l'utente non fosse collegato.
    */
   async init(): Promise<void> {
+    // Quando l'utente torna da un'azione chiesta a Keycloak, keycloak-js ci avvisa con l'esito
+    this.keycloak.onActionUpdate = (status, action) => this.actionResult.set({ status, action });
+
     try {
       const authenticated = await this.keycloak.init({
         onLoad: 'check-sso',
@@ -75,11 +84,24 @@ export class AuthService {
   }
 
   /**
-   * Apre la pagina di gestione dell'account di Keycloak: da lì si cambiano nome, email e password.
-   * Sono dati di Keycloak, non dell'app, quindi non si modificano nel profilo dell'applicazione.
+   * Porta a Keycloak per cambiare la password: mostra solo il form "Nuova password", senza la console dell'account.
+   * Al ritorno l'utente torna al profilo e l'esito arriva in `actionResult`.
    */
-  manageAccount(): Promise<void> {
-    return this.keycloak.accountManagement();
+  changePassword(): Promise<void> {
+    return this.requestKeycloakAction('UPDATE_PASSWORD');
+  }
+
+  /**
+   * Porta a Keycloak per modificare nome e cognome (l'email non è modificabile: nel realm è anche il nome utente).
+   * Il nuovo nome arriva a Laravel con il token successivo, che lo riallinea al profilo.
+   */
+  editName(): Promise<void> {
+    return this.requestKeycloakAction('UPDATE_PROFILE');
+  }
+
+  /** Chiede a Keycloak un'azione mirata sull'utente collegato e poi torna al profilo dell'app. */
+  private requestKeycloakAction(action: string): Promise<void> {
+    return this.keycloak.login({ action, redirectUri: `${window.location.origin}/profile`, locale: 'it' });
   }
 
   /** Esce: chiude la sessione su Keycloak e torna alla pagina iniziale. */

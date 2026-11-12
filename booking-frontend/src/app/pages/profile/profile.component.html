@@ -2,18 +2,12 @@
   <h1>Il mio profilo</h1>
 </header>
 
-@if (notice()) {
-  <p class="alert" role="status">{{ notice() }}</p>
-}
-@if (error()) {
-  <p class="alert alert--error" role="alert">{{ error() }}</p>
-}
-
 @if (auth.user(); as user) {
   <section class="summary-box" aria-labelledby="access-title">
     <h2 id="access-title">I tuoi dati di accesso</h2>
     <p class="muted">
-      Nome, email e password sono gestiti dal tuo account: per cambiarli apri la gestione dell'account.
+      Nome, email e password sono gestiti dal tuo account di accesso: password e nome si cambiano con i pulsanti qui sotto
+      (ti portano alla pagina di accesso e poi tornano qui). L'email non si può modificare.
     </p>
 
     <dl class="details">
@@ -25,7 +19,10 @@
       <dd>{{ roleText() }}</dd>
     </dl>
 
-    <button mat-stroked-button type="button" (click)="manageAccount()">Gestisci account e password</button>
+    <div class="form-actions">
+      <button mat-stroked-button type="button" (click)="changePassword()">Cambia password</button>
+      <button mat-stroked-button type="button" (click)="editName()">Modifica nome e cognome</button>
+    </div>
   </section>
 
   <section aria-labelledby="data-title">

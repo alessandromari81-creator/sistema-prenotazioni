@@ -26,7 +26,7 @@ sistema-prenotazioni/
 - Iscrizione e annullamento dell'iscrizione, con posti liberi sempre aggiornati
 - "I miei corsi" con il riepilogo dell'abbonamento (durata, corsi in uso e disponibili)
 - Prenotazione delle sale: data, slot liberi, "Le mie prenotazioni" con annullamento
-- "Il mio profilo": dati di accesso in sola lettura (con il pulsante per gestirli su Keycloak) e indirizzo modificabile
+- "Il mio profilo": dati di accesso in sola lettura, pulsanti per cambiare password e nome (form mirati di Keycloak, senza la sua console) e indirizzo modificabile
 
 **Istruttore** (non è un ruolo globale: è un'assegnazione a un corso)
 - "Corsi che insegno" e, per ogni corso, l'elenco degli iscritti con nome ed email
@@ -61,7 +61,7 @@ Prenotazione delle sale:
 |---|---|
 | ![Elenco delle sale](docs/screenshots/sale-elenco.png) | ![Scelta di data e slot](docs/screenshots/sala-scelta-slot.png) |
 
-Il profilo: nome ed email (di Keycloak) in sola lettura, indirizzo (dell'applicazione) modificabile:
+Il profilo: nome ed email (di Keycloak) in sola lettura con i pulsanti per cambiare password e nome, indirizzo (dell'applicazione) modificabile. L'email non è modificabile: nel realm è anche il nome utente:
 
 ![Il mio profilo](docs/screenshots/profilo.png)
 
@@ -254,7 +254,7 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 # Backend: 258 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
-# Frontend: 120 test (Vitest + axe-core)
+# Frontend: 132 test (Vitest + axe-core)
 cd booking-frontend && ng test --watch=false
 ```
 
