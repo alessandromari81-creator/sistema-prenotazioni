@@ -2,7 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { vi } from 'vitest';
+import { Router } from '@angular/router';
 import { AuthService, KEYCLOAK } from './auth.service';
+import { NotificationService } from '../features/notification.service';
+import { SessionMessage, SessionSyncService } from '../features/session-sync.service';
 
 /** Un Keycloak finto: si controlla cosa gli chiede l'app, senza un server vero. */
 function fakeKeycloak(overrides: Record<string, unknown> = {}) {
@@ -14,16 +17,32 @@ function fakeKeycloak(overrides: Record<string, unknown> = {}) {
     register: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     updateToken: vi.fn().mockResolvedValue(true),
+    clearToken: vi.fn(),
     ...overrides,
   };
 }
 
 describe('AuthService', () => {
   let http: HttpTestingController;
+  // Il canale tra le schede è finto: si prende il "gestore" registrato da AuthService per simulare i messaggi altrui
+  let sync: { announce: ReturnType<typeof vi.fn>; listen: ReturnType<typeof vi.fn> };
+  let notifications: { info: ReturnType<typeof vi.fn>; action: ReturnType<typeof vi.fn> };
+  let navigate: ReturnType<typeof vi.fn>;
+
+  /** Simula un messaggio arrivato da un'altra scheda. */
+  function fromOtherTab(message: SessionMessage): void {
+    sync.listen.mock.calls[0][0](message);
+  }
 
   function setup(keycloak: ReturnType<typeof fakeKeycloak>): AuthService {
+    sync = { announce: vi.fn(), listen: vi.fn() };
+    notifications = { info: vi.fn(), action: vi.fn() };
+    navigate = vi.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({
       providers: [
+        { provide: SessionSyncService, useValue: sync },
+        { provide: NotificationService, useValue: notifications },
+        { provide: Router, useValue: { navigateByUrl: navigate } },
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: KEYCLOAK, useValue: keycloak },
@@ -168,5 +187,80 @@ describe('AuthService', () => {
 
     expect(await service.getToken()).toBeNull();
     expect(keycloak.login).toHaveBeenCalled();
+  });
+
+  describe('sincronizzazione tra schede', () => {
+    /** Avvia il servizio con un utente collegato (id 7) e lascia che i suoi messaggi arrivino al canale finto. */
+    async function startLoggedIn(keycloak = fakeKeycloak({ init: vi.fn().mockResolvedValue(true), authenticated: true })) {
+      const service = setup(keycloak);
+      const started = service.init();
+      await Promise.resolve();
+      await Promise.resolve();
+      http.expectOne('/api/user').flush({ id: 7, name: 'Mario', email: 'm@example.com', role: 'user' });
+      await started;
+      return { service, keycloak };
+    }
+
+    it('dopo l\'accesso avvisa le altre schede con l\'id dell\'utente, mai con il token', async () => {
+      await startLoggedIn();
+
+      expect(sync.announce).toHaveBeenCalledWith({ type: 'login', userId: 7 });
+    });
+
+    it('senza sessione non annuncia nulla', async () => {
+      const service = setup(fakeKeycloak());
+
+      await service.init();
+
+      expect(sync.announce).not.toHaveBeenCalled();
+    });
+
+    it('il logout avvisa le altre schede', async () => {
+      const { service } = await startLoggedIn();
+
+      await service.logout();
+
+      expect(sync.announce).toHaveBeenCalledWith({ type: 'logout' });
+    });
+
+    it('se un\'altra scheda esce, questa butta il token, torna alla home e avvisa', async () => {
+      const { service, keycloak } = await startLoggedIn();
+
+      fromOtherTab({ type: 'logout' });
+
+      expect(keycloak.clearToken).toHaveBeenCalled();
+      expect(service.isLoggedIn()).toBe(false);
+      expect(navigate).toHaveBeenCalledWith('/');
+      expect(notifications.info).toHaveBeenCalledWith('Sei uscito da un\'altra scheda.');
+    });
+
+    it('se in un\'altra scheda entra un altro utente propone di ricaricare, senza ricaricare da sola', async () => {
+      const { service } = await startLoggedIn();
+
+      fromOtherTab({ type: 'login', userId: 99 });
+
+      expect(notifications.action).toHaveBeenCalledWith(expect.any(String), 'Ricarica', expect.any(Function));
+      expect(service.user()?.id).toBe(7);
+    });
+
+    it('se in un\'altra scheda entra lo stesso utente non fa nulla', async () => {
+      await startLoggedIn();
+
+      fromOtherTab({ type: 'login', userId: 7 });
+
+      expect(notifications.action).not.toHaveBeenCalled();
+      expect(notifications.info).not.toHaveBeenCalled();
+    });
+
+    it('una scheda senza utente ignora i messaggi delle altre', async () => {
+      const service = setup(fakeKeycloak());
+      await service.init();
+
+      fromOtherTab({ type: 'logout' });
+      fromOtherTab({ type: 'login', userId: 1 });
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(notifications.action).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,9 +1,12 @@
 import { Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import Keycloak from 'keycloak-js';
 import { environment } from '../../../../environments/environment';
 import { User } from '../../models/models';
+import { NotificationService } from '../features/notification.service';
+import { SessionMessage, SessionSyncService } from '../features/session-sync.service';
 
 /**
  * Il client di Keycloak. Sta in un token di iniezione così nei test si può sostituire con uno finto,
@@ -26,6 +29,9 @@ export const KEYCLOAK = new InjectionToken<Keycloak>('Client di Keycloak', {
 export class AuthService {
   private http = inject(HttpClient);
   private keycloak = inject(KEYCLOAK);
+  private sessionSync = inject(SessionSyncService);
+  private notifications = inject(NotificationService);
+  private router = inject(Router);
 
   // L'unico stato è il profilo dell'utente: il token lo tiene keycloak-js in memoria
   readonly user = signal<User | null>(null);
@@ -48,6 +54,9 @@ export class AuthService {
     // Quando l'utente torna da un'azione chiesta a Keycloak, keycloak-js ci avvisa con l'esito
     this.keycloak.onActionUpdate = (status, action) => this.actionResult.set({ status, action });
 
+    // Ascolta le altre schede: se una fa login o logout, questa si allinea (vedi onOtherTabMessage)
+    this.sessionSync.listen((message) => this.onOtherTabMessage(message));
+
     try {
       const authenticated = await this.keycloak.init({
         onLoad: 'check-sso',
@@ -59,6 +68,8 @@ export class AuthService {
 
       if (authenticated) {
         await this.loadProfile();
+        // Le altre schede confrontano questo id con il proprio: se è lo stesso utente non fanno nulla
+        this.sessionSync.announce({ type: 'login', userId: this.user()!.id });
       }
     } catch (error) {
       console.error('Keycloak non raggiungibile: l\'app parte senza utente collegato.', error);
@@ -105,9 +116,34 @@ export class AuthService {
   }
 
   /** Esce: chiude la sessione su Keycloak e torna alla pagina iniziale. */
-  logout(): Promise<void> {
+  async logout(): Promise<void> {
+    this.sessionSync.announce({ type: 'logout' });
+    // Una breve pausa prima di lasciare la pagina: Safari può scartare il messaggio se il cambio pagina è immediato
+    await new Promise((resolve) => setTimeout(resolve, 150));
     this.user.set(null);
     return this.keycloak.logout({ redirectUri: window.location.origin + '/' });
+  }
+
+  /**
+   * Reagisce a ciò che comunica un'altra scheda. Una scheda senza utente collegato non ha nulla da correggere.
+   *  - Logout: la sessione su Keycloak è chiusa, quindi si butta il token e si torna alla home con un avviso.
+   *  - Login di un altro utente: la pagina mostra ancora i dati del vecchio utente; si propone di ricaricare
+   *    (non lo si fa da soli, per non far perdere un form compilato). Lo stesso utente non cambia nulla.
+   */
+  private onOtherTabMessage(message: SessionMessage): void {
+    const current = this.user();
+    if (!current) {
+      return;
+    }
+
+    if (message.type === 'logout') {
+      this.keycloak.clearToken();
+      this.user.set(null);
+      this.notifications.info('Sei uscito da un\'altra scheda.');
+      void this.router.navigateByUrl('/');
+    } else if (message.userId !== current.id) {
+      this.notifications.action('In un\'altra scheda è entrato un altro utente.', 'Ricarica', () => window.location.reload());
+    }
   }
 
   /**

@@ -19,6 +19,23 @@ export class NotificationService {
     this.snackBar.open(message, 'Chiudi', { duration: 5000 });
   }
 
+  /**
+   * Mostra un'informazione che resta finché l'utente non la chiude. Serve quando l'avviso può comparire in una scheda
+   * che l'utente non sta guardando (per esempio dopo un'uscita fatta in un'altra scheda): se sparisse da solo
+   * dopo 5 secondi, quando torna sulla scheda non troverebbe più nulla.
+   */
+  info(message: string): void {
+    this.snackBar.open(message, 'Chiudi', { duration: 0 });
+  }
+
+  /**
+   * Mostra un avviso con un pulsante d'azione (per esempio "Ricarica"): resta finché l'utente non sceglie.
+   * Serve quando l'app non deve decidere al posto suo, come davanti a un cambio di utente in un'altra scheda.
+   */
+  action(message: string, label: string, onAction: () => void): void {
+    this.snackBar.open(message, label, { duration: 0 }).onAction().subscribe(onAction);
+  }
+
   /** Mostra un errore: resta finché non viene chiuso e viene annunciato con priorità alta. */
   error(message: string): void {
     this.snackBar.open(message, 'Chiudi', { duration: 0, politeness: 'assertive' });

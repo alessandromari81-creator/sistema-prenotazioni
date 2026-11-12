@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Subject } from 'rxjs';
 import { vi } from 'vitest';
 import { NotificationService } from './notification.service';
 
@@ -36,5 +37,23 @@ describe('NotificationService', () => {
     service.success('Fatto.');
 
     expect(snack.open.mock.calls[0][2].politeness).toBeUndefined();
+  });
+
+  it('un avviso con azione resta finché non si sceglie e chiama la funzione quando si preme il pulsante', () => {
+    const onAction = new Subject<void>();
+    snack.open.mockReturnValue({ onAction: () => onAction });
+    const handler = vi.fn();
+
+    service.action('Cambiato.', 'Ricarica', handler);
+    onAction.next();
+
+    expect(snack.open).toHaveBeenCalledWith('Cambiato.', 'Ricarica', { duration: 0 });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('un\'informazione resta finché non viene chiusa, perché può comparire in una scheda che non si sta guardando', () => {
+    service.info('Sei uscito da un\'altra scheda.');
+
+    expect(snack.open).toHaveBeenCalledWith('Sei uscito da un\'altra scheda.', 'Chiudi', { duration: 0 });
   });
 });
