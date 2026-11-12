@@ -8,6 +8,7 @@ import { Course } from '../../../core/models/models';
 import { CourseService } from '../../../core/services/http/course.service';
 import { UserService } from '../../../core/services/http/user.service';
 import { AdminCourseInstructorsComponent } from './admin-course-instructors.component';
+import { NotificationService } from '../../../core/services/features/notification.service';
 
 const baseCourse: Course = {
   id: 7, name: 'Yoga', description: null, capacity: 12, day_of_week: 1, start_time: '18:30:00', duration_minutes: 60,
@@ -17,6 +18,13 @@ const baseCourse: Course = {
 const users = { data: [{ id: 4, name: 'Mario Rossi', email: 'mario@example.com', role: 'user' }, { id: 2, name: 'Luca Verdi', email: 'luca@example.com', role: 'user' }] };
 
 describe('AdminCourseInstructorsComponent', () => {
+  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
+  const notify = { success: vi.fn(), error: vi.fn() };
+  beforeEach(() => {
+    notify.success.mockReset();
+    notify.error.mockReset();
+  });
+
   let courseApi: { get: ReturnType<typeof vi.fn>; addInstructor: ReturnType<typeof vi.fn>; removeInstructor: ReturnType<typeof vi.fn> };
 
   async function render() {
@@ -24,7 +32,7 @@ describe('AdminCourseInstructorsComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AdminCourseInstructorsComponent],
-      providers: [
+      providers: [{ provide: NotificationService, useValue: notify }, 
         provideRouter([]),
         { provide: CourseService, useValue: courseApi },
         { provide: UserService, useValue: { list: vi.fn().mockReturnValue(of(users)) } },
@@ -71,7 +79,7 @@ describe('AdminCourseInstructorsComponent', () => {
     fixture.detectChanges();
 
     expect(courseApi.addInstructor).toHaveBeenCalledWith(7, 4);
-    expect(el.querySelector('.alert[role="status"]')!.textContent).toContain('Mario Rossi è ora istruttore del corso.');
+    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Mario Rossi è ora istruttore del corso.'));
     expect(text(el)).toContain('Già istruttore');
   });
 
@@ -86,7 +94,7 @@ describe('AdminCourseInstructorsComponent', () => {
     el.querySelector<HTMLButtonElement>('button[aria-label="Assegna Mario Rossi come istruttore"]')!.click();
     fixture.detectChanges();
 
-    expect(el.querySelector('.alert--error[role="alert"]')!.textContent).toContain('iscritto al corso come studente');
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('iscritto al corso come studente'));
   });
 
   it('togliendo un istruttore aggiorna l\'elenco', async () => {

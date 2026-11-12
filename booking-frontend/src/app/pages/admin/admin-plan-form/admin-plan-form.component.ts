@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { SubscriptionPlanInput } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { NotificationService } from '../../../core/services/features/notification.service';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 
 /**
@@ -22,6 +23,7 @@ import { SubscriptionService } from '../../../core/services/http/subscription.se
 })
 export class AdminPlanFormComponent implements OnInit {
   private fb = inject(FormBuilder);
+  private notify = inject(NotificationService); // avvisi a comparsa
   private api = inject(SubscriptionService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -76,7 +78,6 @@ export class AdminPlanFormComponent implements OnInit {
     }
 
     this.saving.set(true);
-    this.error.set(null);
 
     const raw = this.form.getRawValue();
     const payload: SubscriptionPlanInput = { ...raw, description: raw.description || null };
@@ -86,7 +87,7 @@ export class AdminPlanFormComponent implements OnInit {
     request$.subscribe({
       next: () => this.router.navigate(['/admin/plans']),
       error: (e: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(e, 'Salvataggio non riuscito.'));
+        this.notify.error(apiErrorMessage(e, 'Salvataggio non riuscito.'));
         this.saving.set(false);
       },
     });

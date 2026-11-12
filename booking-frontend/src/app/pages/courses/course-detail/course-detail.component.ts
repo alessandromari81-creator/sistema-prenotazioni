@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { Course, Enrollment } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { NotificationService } from '../../../core/services/features/notification.service';
 import { AuthService } from '../../../core/services/http/auth.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { courseSchedule } from '../../../core/utils/schedule';
@@ -22,6 +23,7 @@ import { courseSchedule } from '../../../core/utils/schedule';
 })
 export class CourseDetailComponent implements OnInit {
   private api = inject(CourseService);
+  private notify = inject(NotificationService); // avvisi a comparsa
   private route = inject(ActivatedRoute);
   protected auth = inject(AuthService);
 
@@ -30,7 +32,6 @@ export class CourseDetailComponent implements OnInit {
   protected loading = signal(true);
   protected busy = signal(false);
   protected error = signal<string | null>(null);
-  protected notice = signal<string | null>(null);
 
   /** Le colonne della tabella degli iscritti. */
   protected readonly columns = ['name', 'email'];
@@ -100,17 +101,15 @@ export class CourseDetailComponent implements OnInit {
    */
   private act(request: () => ReturnType<CourseService['enroll']>, successMessage: string): void {
     this.busy.set(true);
-    this.error.set(null);
-    this.notice.set(null);
 
     request().subscribe({
       next: (enrollment) => {
         if (enrollment.course) this.course.set(enrollment.course);
-        this.notice.set(successMessage);
+        this.notify.success(successMessage);
         this.busy.set(false);
       },
       error: (e: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(e, 'Operazione non riuscita.'));
+        this.notify.error(apiErrorMessage(e, 'Operazione non riuscita.'));
         this.busy.set(false);
       },
     });

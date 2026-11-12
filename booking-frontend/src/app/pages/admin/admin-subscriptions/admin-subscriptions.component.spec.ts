@@ -7,6 +7,7 @@ import { Subscription } from '../../../core/models/models';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 import { UserService } from '../../../core/services/http/user.service';
 import { AdminSubscriptionsComponent } from './admin-subscriptions.component';
+import { NotificationService } from '../../../core/services/features/notification.service';
 
 const plan = { id: 1, name: 'Mensile', description: null, duration_days: 30, max_courses: 2, is_active: true };
 const users = { data: [{ id: 4, name: 'Mario Rossi', email: 'mario@example.com', role: 'user' }] };
@@ -16,6 +17,13 @@ function subscription(overrides: Partial<Subscription> = {}): Subscription {
 }
 
 describe('AdminSubscriptionsComponent', () => {
+  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
+  const notify = { success: vi.fn(), error: vi.fn() };
+  beforeEach(() => {
+    notify.success.mockReset();
+    notify.error.mockReset();
+  });
+
   let api: { plans: ReturnType<typeof vi.fn>; ofUser: ReturnType<typeof vi.fn>; assign: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> };
 
   async function render(existing: Subscription[] = []) {
@@ -28,7 +36,7 @@ describe('AdminSubscriptionsComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AdminSubscriptionsComponent],
-      providers: [{ provide: SubscriptionService, useValue: api }, { provide: UserService, useValue: { list: vi.fn().mockReturnValue(of(users)) } }],
+      providers: [{ provide: NotificationService, useValue: notify }, { provide: SubscriptionService, useValue: api }, { provide: UserService, useValue: { list: vi.fn().mockReturnValue(of(users)) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AdminSubscriptionsComponent);
@@ -78,7 +86,7 @@ describe('AdminSubscriptionsComponent', () => {
     fixture.detectChanges();
 
     expect(api.assign).toHaveBeenCalledWith(4, 1, undefined);
-    expect(el.querySelector('.alert[role="status"]')!.textContent).toContain('Abbonamento assegnato a Mario Rossi.');
+    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Abbonamento assegnato a Mario Rossi.'));
   });
 
   it('se i periodi si sovrappongono mostra il rifiuto del server', async () => {
@@ -89,7 +97,7 @@ describe('AdminSubscriptionsComponent', () => {
     el.querySelector<HTMLFormElement>('form[aria-label="Assegna un abbonamento"]')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
 
-    expect(el.querySelector('.alert--error[role="alert"]')!.textContent).toContain('ha già un abbonamento in questo periodo');
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('ha già un abbonamento in questo periodo'));
   });
 
   it('annullando un abbonamento chiede conferma e poi chiama l\'API', async () => {

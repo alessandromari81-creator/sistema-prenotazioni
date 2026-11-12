@@ -3,13 +3,6 @@
   <p class="muted">Cerca una persona per vedere i suoi abbonamenti o assegnargliene uno. Compaiono solo le persone che hanno già fatto almeno un accesso.</p>
 </header>
 
-@if (notice()) {
-  <p class="alert" role="status">{{ notice() }}</p>
-}
-@if (error()) {
-  <p class="alert alert--error" role="alert">{{ error() }}</p>
-}
-
 <section aria-labelledby="users-title">
   <h2 id="users-title">Utenti</h2>
 

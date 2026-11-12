@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { Course, SubscriptionUsage } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { NotificationService } from '../../../core/services/features/notification.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 import { CourseCardComponent } from '../../../shared/course-card/course-card.component';
@@ -21,13 +22,13 @@ import { CourseCardComponent } from '../../../shared/course-card/course-card.com
 })
 export class MyCoursesComponent implements OnInit {
   private courseApi = inject(CourseService);
+  private notify = inject(NotificationService); // avvisi a comparsa
   private subscriptionApi = inject(SubscriptionService);
 
   protected courses = signal<Course[]>([]);
   protected usage = signal<SubscriptionUsage | null>(null);
   protected loading = signal(true);
   protected error = signal<string | null>(null);
-  protected notice = signal<string | null>(null);
   protected busyId = signal<number | null>(null);
 
   /** All'apertura carica i corsi dell'utente e il riepilogo dell'abbonamento. */
@@ -57,17 +58,15 @@ export class MyCoursesComponent implements OnInit {
   /** Annulla l'iscrizione al corso e ricarica l'elenco. */
   protected cancel(course: Course): void {
     this.busyId.set(course.id);
-    this.error.set(null);
-    this.notice.set(null);
 
     this.courseApi.cancelEnrollment(course.id).subscribe({
       next: () => {
-        this.notice.set(`Iscrizione al corso ${course.name} annullata.`);
+        this.notify.success(`Iscrizione al corso ${course.name} annullata.`);
         this.busyId.set(null);
         this.reload();
       },
       error: (e: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(e, 'Annullamento non riuscito.'));
+        this.notify.error(apiErrorMessage(e, 'Annullamento non riuscito.'));
         this.busyId.set(null);
       },
     });

@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { SubscriptionPlan } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { NotificationService } from '../../../core/services/features/notification.service';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 
 /**
@@ -20,11 +21,11 @@ import { SubscriptionService } from '../../../core/services/http/subscription.se
 })
 export class AdminPlansComponent implements OnInit {
   private api = inject(SubscriptionService);
+  private notify = inject(NotificationService); // avvisi a comparsa
 
   protected plans = signal<SubscriptionPlan[]>([]);
   protected loading = signal(true);
   protected error = signal<string | null>(null);
-  protected notice = signal<string | null>(null);
 
   /** Le colonne della tabella. */
   protected readonly columns = ['name', 'duration', 'courses', 'status', 'actions'];
@@ -54,15 +55,13 @@ export class AdminPlansComponent implements OnInit {
   protected remove(plan: SubscriptionPlan): void {
     if (!confirm(`Eliminare il piano "${plan.name}"?`)) return;
 
-    this.error.set(null);
-    this.notice.set(null);
 
     this.api.deletePlan(plan.id).subscribe({
       next: () => {
-        this.notice.set(`Il piano ${plan.name} è stato eliminato.`);
+        this.notify.success(`Il piano ${plan.name} è stato eliminato.`);
         this.load();
       },
-      error: (e: HttpErrorResponse) => this.error.set(apiErrorMessage(e, 'Eliminazione non riuscita.')),
+      error: (e: HttpErrorResponse) => this.notify.error(apiErrorMessage(e, 'Eliminazione non riuscita.')),
     });
   }
 }

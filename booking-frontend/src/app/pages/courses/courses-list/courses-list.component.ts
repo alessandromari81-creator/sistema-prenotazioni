@@ -7,6 +7,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { Course } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { NotificationService } from '../../../core/services/features/notification.service';
 import { AuthService } from '../../../core/services/http/auth.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { WEEK_DAYS } from '../../../core/utils/schedule';
@@ -31,6 +32,7 @@ import { CourseCardComponent } from '../../../shared/course-card/course-card.com
 })
 export class CoursesListComponent implements OnInit {
   private api = inject(CourseService);
+  private notify = inject(NotificationService); // avvisi a comparsa
   private auth = inject(AuthService);
 
   /** I giorni per il filtro. */
@@ -40,7 +42,6 @@ export class CoursesListComponent implements OnInit {
   protected courses = signal<Course[]>([]);
   protected loading = signal(true);
   protected error = signal<string | null>(null);
-  protected notice = signal<string | null>(null);
   protected busyId = signal<number | null>(null); // il corso su cui è in corso un'azione
 
   // Paginazione
@@ -123,19 +124,17 @@ export class CoursesListComponent implements OnInit {
     successMessage: string
   ): void {
     this.busyId.set(course.id);
-    this.error.set(null);
-    this.notice.set(null);
 
     request.subscribe({
       next: (enrollment) => {
         if (enrollment.course) {
           this.courses.update((list) => list.map((c) => (c.id === course.id ? enrollment.course! : c)));
         }
-        this.notice.set(successMessage);
+        this.notify.success(successMessage);
         this.busyId.set(null);
       },
       error: (e: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(e, 'Operazione non riuscita.'));
+        this.notify.error(apiErrorMessage(e, 'Operazione non riuscita.'));
         this.busyId.set(null);
       },
     });

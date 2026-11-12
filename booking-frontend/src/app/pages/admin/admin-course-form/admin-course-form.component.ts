@@ -9,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Bookable, CourseInput } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { NotificationService } from '../../../core/services/features/notification.service';
 import { BookingService } from '../../../core/services/http/booking.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { WEEK_DAYS, shortTime } from '../../../core/utils/schedule';
@@ -26,6 +27,7 @@ import { WEEK_DAYS, shortTime } from '../../../core/utils/schedule';
 })
 export class AdminCourseFormComponent implements OnInit {
   private fb = inject(FormBuilder);
+  private notify = inject(NotificationService); // avvisi a comparsa
   private api = inject(CourseService);
   private bookingApi = inject(BookingService);
   private route = inject(ActivatedRoute);
@@ -96,7 +98,6 @@ export class AdminCourseFormComponent implements OnInit {
     }
 
     this.saving.set(true);
-    this.error.set(null);
 
     const raw = this.form.getRawValue();
     const payload: CourseInput = { ...raw, description: raw.description || null };
@@ -106,7 +107,7 @@ export class AdminCourseFormComponent implements OnInit {
     request$.subscribe({
       next: () => this.router.navigate(['/admin/courses']),
       error: (e: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(e, 'Salvataggio non riuscito.'));
+        this.notify.error(apiErrorMessage(e, 'Salvataggio non riuscito.'));
         this.saving.set(false);
       },
     });

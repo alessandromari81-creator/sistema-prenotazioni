@@ -6,6 +6,7 @@ import { vi } from 'vitest';
 import { expectNoA11yViolations } from '../../../../testing/a11y';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 import { AdminPlansComponent } from './admin-plans.component';
+import { NotificationService } from '../../../core/services/features/notification.service';
 
 const plans = [
   { id: 1, name: 'Mensile', description: null, duration_days: 30, max_courses: 2, is_active: true },
@@ -13,6 +14,13 @@ const plans = [
 ];
 
 describe('AdminPlansComponent', () => {
+  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
+  const notify = { success: vi.fn(), error: vi.fn() };
+  beforeEach(() => {
+    notify.success.mockReset();
+    notify.error.mockReset();
+  });
+
   let api: { plans: ReturnType<typeof vi.fn>; deletePlan: ReturnType<typeof vi.fn> };
 
   async function render() {
@@ -20,7 +28,7 @@ describe('AdminPlansComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AdminPlansComponent],
-      providers: [provideRouter([]), { provide: SubscriptionService, useValue: api }],
+      providers: [{ provide: NotificationService, useValue: notify }, provideRouter([]), { provide: SubscriptionService, useValue: api }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AdminPlansComponent);
@@ -57,7 +65,7 @@ describe('AdminPlansComponent', () => {
 
     expect(confirmSpy).toHaveBeenCalled();
     expect(api.deletePlan).toHaveBeenCalledWith(1);
-    expect(el.querySelector('.alert[role="status"]')!.textContent).toContain('Il piano Mensile è stato eliminato.');
+    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Il piano Mensile è stato eliminato.'));
     confirmSpy.mockRestore();
   });
 
@@ -72,7 +80,7 @@ describe('AdminPlansComponent', () => {
     el.querySelector<HTMLButtonElement>('button[aria-label="Elimina il piano Mensile"]')!.click();
     fixture.detectChanges();
 
-    expect(el.querySelector('.alert--error[role="alert"]')!.textContent).toContain('disattivalo invece di eliminarlo');
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('disattivalo invece di eliminarlo'));
     confirmSpy.mockRestore();
   });
 

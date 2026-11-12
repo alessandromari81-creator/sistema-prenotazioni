@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { expectNoA11yViolations } from '../../../testing/a11y';
 import { User } from '../../core/models/models';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '../../core/services/features/notification.service';
 import { AuthService } from '../../core/services/http/auth.service';
 import { UserService } from '../../core/services/http/user.service';
 import { ProfileComponent } from './profile.component';
@@ -16,7 +16,7 @@ describe('ProfileComponent', () => {
   let fixture: ComponentFixture<ProfileComponent>;
   let el: HTMLElement;
   let users: { updateMe: ReturnType<typeof vi.fn> };
-  let snack: { open: ReturnType<typeof vi.fn> };
+  let notify: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
   let auth: {
     user: ReturnType<typeof signal<User | null>>;
     actionResult: ReturnType<typeof signal<{ status: string; action?: string } | null>>;
@@ -26,7 +26,7 @@ describe('ProfileComponent', () => {
 
   async function render(user: User = mario, actionResult: { status: string; action?: string } | null = null) {
     users = { updateMe: vi.fn() };
-    snack = { open: vi.fn() };
+    notify = { success: vi.fn(), error: vi.fn() };
     auth = {
       user: signal<User | null>(user),
       actionResult: signal(actionResult),
@@ -36,7 +36,7 @@ describe('ProfileComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [ProfileComponent],
-      providers: [{ provide: UserService, useValue: users }, { provide: AuthService, useValue: auth }, { provide: MatSnackBar, useValue: snack }],
+      providers: [{ provide: UserService, useValue: users }, { provide: AuthService, useValue: auth }, { provide: NotificationService, useValue: notify }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProfileComponent);
@@ -86,8 +86,7 @@ describe('ProfileComponent', () => {
 
     expect(users.updateMe).toHaveBeenCalledWith('Via Verdi 2'); // spazi tolti
     expect(auth.user()?.address).toBe('Via Verdi 2');
-    // L'esito è un avviso a comparsa che sparisce da solo dopo 5 secondi
-    expect(snack.open).toHaveBeenCalledWith('Profilo aggiornato.', 'Chiudi', { duration: 5000 });
+    expect(notify.success).toHaveBeenCalledWith('Profilo aggiornato.');
   });
 
   it('un campo vuoto cancella l\'indirizzo (invia null)', async () => {
@@ -118,8 +117,7 @@ describe('ProfileComponent', () => {
     submit();
     fixture.detectChanges();
 
-    // Un errore resta finché non lo si chiude ed è annunciato con priorità alta
-    expect(snack.open).toHaveBeenCalledWith('L\'indirizzo non è valido.', 'Chiudi', { duration: 0, politeness: 'assertive' });
+    expect(notify.error).toHaveBeenCalledWith('L\'indirizzo non è valido.');
   });
 
   const button = (label: string) => Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes(label))!;
@@ -152,42 +150,44 @@ describe('ProfileComponent', () => {
   it('senza azioni precedenti non mostra nessun esito', async () => {
     await render();
 
-    expect(snack.open).not.toHaveBeenCalled();
+    expect(notify.success).not.toHaveBeenCalled();
+    expect(notify.error).not.toHaveBeenCalled();
     expect(el.querySelectorAll('.alert')).toHaveLength(0);
   });
 
   it('al ritorno da un cambio di password mostra l\'esito in un avviso a comparsa', async () => {
     await render(mario, { status: 'success', action: 'UPDATE_PASSWORD' });
 
-    expect(snack.open).toHaveBeenCalledWith('Password aggiornata.', 'Chiudi', { duration: 5000 });
+    expect(notify.success).toHaveBeenCalledWith('Password aggiornata.');
   });
 
   it('al ritorno da una modifica del nome annuncia l\'esito', async () => {
     await render(mario, { status: 'success', action: 'UPDATE_PROFILE' });
 
-    expect(snack.open).toHaveBeenCalledWith('Nome aggiornato.', 'Chiudi', { duration: 5000 });
+    expect(notify.success).toHaveBeenCalledWith('Nome aggiornato.');
   });
 
   it('se l\'azione è stata annullata lo dice, senza toni d\'errore', async () => {
     await render(mario, { status: 'cancelled', action: 'UPDATE_PASSWORD' });
 
-    expect(snack.open).toHaveBeenCalledWith('Operazione annullata: non è stato cambiato nulla.', 'Chiudi', { duration: 5000 });
+    expect(notify.success).toHaveBeenCalledWith('Operazione annullata: non è stato cambiato nulla.');
   });
 
   it('se l\'azione è fallita mostra un errore che resta finché non lo si chiude', async () => {
     await render(mario, { status: 'error', action: 'UPDATE_PASSWORD' });
 
-    expect(snack.open).toHaveBeenCalledWith('L\'operazione su Keycloak non è riuscita. Riprova.', 'Chiudi', { duration: 0, politeness: 'assertive' });
+    expect(notify.error).toHaveBeenCalledWith('L\'operazione su Keycloak non è riuscita. Riprova.');
   });
 
   it('l\'esito si mostra una volta sola: tornando sulla pagina più tardi non riappare', async () => {
     await render(mario, { status: 'success', action: 'UPDATE_PASSWORD' });
     expect(auth.actionResult()).toBeNull(); // consumato
 
-    snack.open.mockClear();
+    notify.success.mockClear();
     TestBed.createComponent(ProfileComponent); // si riapre la pagina
 
-    expect(snack.open).not.toHaveBeenCalled();
+    expect(notify.success).not.toHaveBeenCalled();
+    expect(notify.error).not.toHaveBeenCalled();
   });
 
   it('non lascia avvisi fissi nella pagina (stanno tutti nella snackbar)', async () => {

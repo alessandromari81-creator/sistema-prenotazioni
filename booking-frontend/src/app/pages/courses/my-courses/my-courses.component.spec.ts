@@ -7,6 +7,7 @@ import { Course, SubscriptionUsage } from '../../../core/models/models';
 import { CourseService } from '../../../core/services/http/course.service';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 import { MyCoursesComponent } from './my-courses.component';
+import { NotificationService } from '../../../core/services/features/notification.service';
 
 const yoga: Course = {
   id: 7, name: 'Yoga', description: null, capacity: 12, day_of_week: 1, start_time: '18:30:00', duration_minutes: 60,
@@ -23,13 +24,20 @@ const withPlan: SubscriptionUsage = {
 };
 
 describe('MyCoursesComponent', () => {
+  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
+  const notify = { success: vi.fn(), error: vi.fn() };
+  beforeEach(() => {
+    notify.success.mockReset();
+    notify.error.mockReset();
+  });
+
   async function render(courses: Course[], usage: SubscriptionUsage) {
     const courseApi = { myCourses: vi.fn().mockReturnValue(of(courses)), cancelEnrollment: vi.fn().mockReturnValue(of({})) };
     const subscriptionApi = { mine: vi.fn().mockReturnValue(of(usage)) };
 
     await TestBed.configureTestingModule({
       imports: [MyCoursesComponent],
-      providers: [provideRouter([]), { provide: CourseService, useValue: courseApi }, { provide: SubscriptionService, useValue: subscriptionApi }],
+      providers: [{ provide: NotificationService, useValue: notify }, provideRouter([]), { provide: CourseService, useValue: courseApi }, { provide: SubscriptionService, useValue: subscriptionApi }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(MyCoursesComponent);
@@ -74,7 +82,7 @@ describe('MyCoursesComponent', () => {
     fixture.detectChanges();
 
     expect(courseApi.cancelEnrollment).toHaveBeenCalledWith(7);
-    expect(el.querySelector('.alert[role="status"]')!.textContent).toContain('Iscrizione al corso Yoga annullata.');
+    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Iscrizione al corso Yoga annullata.'));
   });
 
   it('è accessibile (WCAG 2.2 AA, senza il contrasto)', async () => {

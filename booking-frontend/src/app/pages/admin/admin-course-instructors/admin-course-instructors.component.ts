@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Course, User } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { NotificationService } from '../../../core/services/features/notification.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { UserService } from '../../../core/services/http/user.service';
 
@@ -23,6 +24,7 @@ import { UserService } from '../../../core/services/http/user.service';
 })
 export class AdminCourseInstructorsComponent implements OnInit {
   private courseApi = inject(CourseService);
+  private notify = inject(NotificationService); // avvisi a comparsa
   private userApi = inject(UserService);
   private route = inject(ActivatedRoute);
 
@@ -32,7 +34,6 @@ export class AdminCourseInstructorsComponent implements OnInit {
   protected query = signal('');
   protected loading = signal(true);
   protected error = signal<string | null>(null);
-  protected notice = signal<string | null>(null);
 
   /** All'apertura legge l'id dall'indirizzo e carica il corso con i suoi istruttori. */
   ngOnInit(): void {
@@ -52,14 +53,13 @@ export class AdminCourseInstructorsComponent implements OnInit {
 
   /** Cerca gli utenti per nome o email (solo quelli che hanno già fatto almeno un accesso). */
   protected searchUsers(): void {
-    this.error.set(null);
 
     this.userApi.list({ search: this.query().trim(), perPage: 10 }).subscribe({
       next: (response) => {
         this.results.set(response.data);
         this.searched.set(true);
       },
-      error: (e: HttpErrorResponse) => this.error.set(apiErrorMessage(e, 'Ricerca non riuscita.')),
+      error: (e: HttpErrorResponse) => this.notify.error(apiErrorMessage(e, 'Ricerca non riuscita.')),
     });
   }
 
@@ -80,15 +80,13 @@ export class AdminCourseInstructorsComponent implements OnInit {
 
   /** Esegue la modifica, mostra l'esito e sostituisce il corso con quello aggiornato restituito dal server. */
   private change(request: ReturnType<CourseService['addInstructor']>, successMessage: string): void {
-    this.error.set(null);
-    this.notice.set(null);
 
     request.subscribe({
       next: (course) => {
         this.course.set(course);
-        this.notice.set(successMessage);
+        this.notify.success(successMessage);
       },
-      error: (e: HttpErrorResponse) => this.error.set(apiErrorMessage(e, 'Operazione non riuscita.')),
+      error: (e: HttpErrorResponse) => this.notify.error(apiErrorMessage(e, 'Operazione non riuscita.')),
     });
   }
 }

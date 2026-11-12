@@ -7,6 +7,7 @@ import { expectNoA11yViolations } from '../../../../testing/a11y';
 import { Course } from '../../../core/models/models';
 import { CourseService } from '../../../core/services/http/course.service';
 import { AdminCoursesComponent } from './admin-courses.component';
+import { NotificationService } from '../../../core/services/features/notification.service';
 
 const yoga: Course = {
   id: 7, name: 'Yoga', description: null, capacity: 12, day_of_week: 1, start_time: '18:30:00', duration_minutes: 60,
@@ -19,6 +20,13 @@ function page(data: Course[]) {
 }
 
 describe('AdminCoursesComponent', () => {
+  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
+  const notify = { success: vi.fn(), error: vi.fn() };
+  beforeEach(() => {
+    notify.success.mockReset();
+    notify.error.mockReset();
+  });
+
   let api: { list: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
 
   async function render() {
@@ -26,7 +34,7 @@ describe('AdminCoursesComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AdminCoursesComponent],
-      providers: [provideRouter([]), { provide: CourseService, useValue: api }],
+      providers: [{ provide: NotificationService, useValue: notify }, provideRouter([]), { provide: CourseService, useValue: api }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AdminCoursesComponent);
@@ -61,7 +69,7 @@ describe('AdminCoursesComponent', () => {
     fixture.detectChanges();
 
     expect(api.delete).toHaveBeenCalledWith(7);
-    expect(el.querySelector('.alert[role="status"]')!.textContent).toContain('Il corso Yoga è stato eliminato.');
+    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Il corso Yoga è stato eliminato.'));
     confirmSpy.mockRestore();
   });
 
@@ -73,7 +81,7 @@ describe('AdminCoursesComponent', () => {
     el.querySelector<HTMLButtonElement>('button[aria-label="Elimina Yoga"]')!.click();
     fixture.detectChanges();
 
-    expect(el.querySelector('.alert--error[role="alert"]')!.textContent).toContain('Il corso ha 5 iscritti');
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('Il corso ha 5 iscritti'));
     confirmSpy.mockRestore();
   });
 

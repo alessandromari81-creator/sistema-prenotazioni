@@ -8,6 +8,7 @@ import { Course } from '../../../core/models/models';
 import { AuthService } from '../../../core/services/http/auth.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { CoursesListComponent } from './courses-list.component';
+import { NotificationService } from '../../../core/services/features/notification.service';
 
 function course(id: number, overrides: Partial<Course> = {}): Course {
   return {
@@ -35,6 +36,13 @@ function page(data: Course[]) {
 }
 
 describe('CoursesListComponent', () => {
+  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
+  const notify = { success: vi.fn(), error: vi.fn() };
+  beforeEach(() => {
+    notify.success.mockReset();
+    notify.error.mockReset();
+  });
+
   let fixture: ComponentFixture<CoursesListComponent>;
   let api: { list: ReturnType<typeof vi.fn>; enroll: ReturnType<typeof vi.fn>; cancelEnrollment: ReturnType<typeof vi.fn> };
   let el: HTMLElement;
@@ -44,7 +52,7 @@ describe('CoursesListComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [CoursesListComponent],
-      providers: [provideRouter([]), { provide: CourseService, useValue: api }, { provide: AuthService, useValue: { isAdmin: () => isAdmin } }],
+      providers: [{ provide: NotificationService, useValue: notify }, provideRouter([]), { provide: CourseService, useValue: api }, { provide: AuthService, useValue: { isAdmin: () => isAdmin } }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CoursesListComponent);
@@ -119,7 +127,7 @@ describe('CoursesListComponent', () => {
     expect(api.enroll).toHaveBeenCalledWith(1);
     expect(text()).toContain('Sei iscritto');
     expect(text()).toContain('6 posti liberi');
-    expect(el.querySelector('.alert[role="status"]')!.textContent).toContain('Iscrizione al corso Yoga completata.');
+    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Iscrizione al corso Yoga completata.'));
   });
 
   it('se il server rifiuta mostra il motivo in un avviso (role="alert")', async () => {
@@ -130,7 +138,18 @@ describe('CoursesListComponent', () => {
     button('Iscriviti a Yoga')!.click();
     fixture.detectChanges();
 
-    expect(el.querySelector('.alert--error[role="alert"]')!.textContent).toContain('Per iscriverti serve un abbonamento attivo.');
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('Per iscriverti serve un abbonamento attivo.'));
+  });
+
+  it('dopo un\'azione non resta nessun avviso fisso nella pagina (l\'esito è nella snackbar)', async () => {
+    await setup([course(1, { name: 'Yoga' })]);
+    api.enroll.mockReturnValue(of({ id: 1, course_id: 1, user_id: 1, status: 'active', course: course(1, { name: 'Yoga', is_enrolled: true }), created_at: null }));
+
+    button('Iscriviti a Yoga')!.click();
+    fixture.detectChanges();
+
+    expect(notify.success).toHaveBeenCalledWith('Iscrizione al corso Yoga completata.');
+    expect(el.querySelectorAll('.alert')).toHaveLength(0);
   });
 
   it('annullando l\'iscrizione aggiorna la scheda', async () => {
@@ -142,14 +161,14 @@ describe('CoursesListComponent', () => {
     fixture.detectChanges();
 
     expect(button('Iscriviti a Yoga')).not.toBeNull();
-    expect(text()).toContain('Iscrizione al corso Yoga annullata.');
+    expect(notify.success).toHaveBeenCalledWith('Iscrizione al corso Yoga annullata.');
   });
 
   it('se il caricamento fallisce mostra un avviso', async () => {
     api = { list: vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500, error: null }))), enroll: vi.fn(), cancelEnrollment: vi.fn() };
     await TestBed.configureTestingModule({
       imports: [CoursesListComponent],
-      providers: [provideRouter([]), { provide: CourseService, useValue: api }, { provide: AuthService, useValue: { isAdmin: () => false } }],
+      providers: [{ provide: NotificationService, useValue: notify }, provideRouter([]), { provide: CourseService, useValue: api }, { provide: AuthService, useValue: { isAdmin: () => false } }],
     }).compileComponents();
     fixture = TestBed.createComponent(CoursesListComponent);
     fixture.detectChanges();

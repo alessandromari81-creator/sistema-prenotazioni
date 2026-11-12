@@ -25,9 +25,6 @@
 <!-- Zone "live": i lettori di schermo annunciano da sole queste frasi quando cambiano -->
 <p class="sr-only" role="status">{{ resultsText() }}</p>
 
-@if (notice()) {
-  <p class="alert" role="status">{{ notice() }}</p>
-}
 @if (error()) {
   <p class="alert alert--error" role="alert">{{ error() }}</p>
 }

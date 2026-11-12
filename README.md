@@ -112,6 +112,8 @@ Il frontend è scritto per essere usabile con tastiera e lettore di schermo:
   schermo (`role="status"` e `role="alert"`); i pulsanti ripetuti hanno un nome che dice su cosa agiscono
   ("Iscriviti a Yoga") e che contiene il testo visibile;
 - gli stati sono sempre scritti a parole ("Al completo", "Sei iscritto"), mai solo con il colore;
+- gli esiti delle azioni sono avvisi a comparsa (snackbar): i successi spariscono dopo 5 secondi, gli errori restano finché si preme
+  "Chiudi" (WCAG 2.2.1: un errore che sparisce da solo si rischia di non leggerlo); gli errori di caricamento restano scritti nella pagina;
 - rispetto di `prefers-reduced-motion`.
 
 **Come è verificata**: i test dei componenti includono un controllo automatico con
@@ -254,7 +256,7 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 # Backend: 258 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
-# Frontend: 132 test (Vitest + axe-core)
+# Frontend: 137 test (Vitest + axe-core)
 cd booking-frontend && ng test --watch=false
 ```
 

@@ -1,8 +1,5 @@
 <a mat-button routerLink="/admin/courses">Torna ai corsi</a>
 
-@if (notice()) {
-  <p class="alert" role="status">{{ notice() }}</p>
-}
 @if (error()) {
   <p class="alert alert--error" role="alert">{{ error() }}</p>
 }

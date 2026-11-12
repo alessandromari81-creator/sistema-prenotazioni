@@ -10,6 +10,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 import { Course } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { NotificationService } from '../../../core/services/features/notification.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { courseSchedule } from '../../../core/utils/schedule';
 
@@ -25,12 +26,12 @@ import { courseSchedule } from '../../../core/utils/schedule';
 })
 export class AdminCoursesComponent implements OnInit {
   private api = inject(CourseService);
+  private notify = inject(NotificationService); // avvisi a comparsa
   private searchSubject = new Subject<string>();
 
   protected courses = signal<Course[]>([]);
   protected loading = signal(true);
   protected error = signal<string | null>(null);
-  protected notice = signal<string | null>(null);
 
   protected page = signal(1);
   protected perPage = signal(10);
@@ -92,16 +93,14 @@ export class AdminCoursesComponent implements OnInit {
   protected remove(course: Course): void {
     if (!confirm(`Eliminare il corso "${course.name}"?`)) return;
 
-    this.error.set(null);
-    this.notice.set(null);
 
     this.api.delete(course.id).subscribe({
       next: () => {
-        this.notice.set(`Il corso ${course.name} è stato eliminato.`);
+        this.notify.success(`Il corso ${course.name} è stato eliminato.`);
         if (this.courses().length === 1 && this.page() > 1) this.page.update((p) => p - 1);
         this.load();
       },
-      error: (e: HttpErrorResponse) => this.error.set(apiErrorMessage(e, 'Eliminazione non riuscita.')),
+      error: (e: HttpErrorResponse) => this.notify.error(apiErrorMessage(e, 'Eliminazione non riuscita.')),
     });
   }
 }

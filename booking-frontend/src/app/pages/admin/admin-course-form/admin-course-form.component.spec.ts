@@ -7,8 +7,16 @@ import { expectNoA11yViolations } from '../../../../testing/a11y';
 import { BookingService } from '../../../core/services/http/booking.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { AdminCourseFormComponent } from './admin-course-form.component';
+import { NotificationService } from '../../../core/services/features/notification.service';
 
 describe('AdminCourseFormComponent', () => {
+  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
+  const notify = { success: vi.fn(), error: vi.fn() };
+  beforeEach(() => {
+    notify.success.mockReset();
+    notify.error.mockReset();
+  });
+
   let api: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
 
   async function render(id: string | null = null) {
@@ -20,7 +28,7 @@ describe('AdminCourseFormComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AdminCourseFormComponent],
-      providers: [
+      providers: [{ provide: NotificationService, useValue: notify }, 
         provideRouter([]),
         { provide: CourseService, useValue: api },
         { provide: BookingService, useValue: { getBookables: vi.fn().mockReturnValue(of({ data: [{ id: 1, name: 'Sala grande' }] })) } },
@@ -111,7 +119,7 @@ describe('AdminCourseFormComponent', () => {
     submit(el);
     fixture.detectChanges();
 
-    expect(el.querySelector('.alert--error[role="alert"]')!.textContent).toContain('I posti non possono essere meno degli iscritti attuali (3).');
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('I posti non possono essere meno degli iscritti attuali (3).'));
     expect(navigate).not.toHaveBeenCalled();
   });
 

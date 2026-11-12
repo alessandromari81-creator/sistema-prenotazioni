@@ -8,6 +8,7 @@ import { Course, Enrollment } from '../../../core/models/models';
 import { AuthService } from '../../../core/services/http/auth.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { CourseDetailComponent } from './course-detail.component';
+import { NotificationService } from '../../../core/services/features/notification.service';
 
 function course(overrides: Partial<Course> = {}): Course {
   return {
@@ -22,6 +23,13 @@ const students: Enrollment[] = [
 ];
 
 describe('CourseDetailComponent', () => {
+  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
+  const notify = { success: vi.fn(), error: vi.fn() };
+  beforeEach(() => {
+    notify.success.mockReset();
+    notify.error.mockReset();
+  });
+
   let fixture: ComponentFixture<CourseDetailComponent>;
   let api: { get: ReturnType<typeof vi.fn>; students: ReturnType<typeof vi.fn>; enroll: ReturnType<typeof vi.fn>; cancelEnrollment: ReturnType<typeof vi.fn> };
 
@@ -35,7 +43,7 @@ describe('CourseDetailComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [CourseDetailComponent],
-      providers: [
+      providers: [{ provide: NotificationService, useValue: notify }, 
         provideRouter([]),
         { provide: CourseService, useValue: api },
         { provide: AuthService, useValue: { isAdmin: () => isAdmin } },
@@ -102,7 +110,7 @@ describe('CourseDetailComponent', () => {
     expect(api.enroll).toHaveBeenCalledWith(7);
     expect(text(el)).toContain('Sei iscritto');
     expect(text(el)).toContain('7 posti liberi');
-    expect(el.querySelector('.alert[role="status"]')!.textContent).toContain('Iscrizione completata.');
+    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Iscrizione completata.'));
     expect(text(el)).toContain('Annulla iscrizione');
   });
 
@@ -115,7 +123,7 @@ describe('CourseDetailComponent', () => {
 
     expect(api.cancelEnrollment).toHaveBeenCalledWith(7);
     expect(text(el)).toContain('Iscriviti al corso');
-    expect(el.querySelector('.alert[role="status"]')!.textContent).toContain('Iscrizione annullata.');
+    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Iscrizione annullata.'));
   });
 
   it('se il server rifiuta l\'iscrizione mostra il motivo', async () => {
@@ -126,7 +134,7 @@ describe('CourseDetailComponent', () => {
     Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes('Iscriviti'))!.click();
     fixture.detectChanges();
 
-    expect(el.querySelector('.alert--error[role="alert"]')!.textContent).toContain('Il corso è al completo.');
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('Il corso è al completo.'));
   });
 
   it('se il corso non esiste mostra un avviso', async () => {
