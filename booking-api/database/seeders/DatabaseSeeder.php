@@ -22,8 +22,8 @@ class DatabaseSeeder extends Seeder
         $this->seedUsers();
         $this->seedGym();
 
-        // Crea 3 sale prenotabili di prova usando la factory
-        $bookables = Bookable::factory()->count(3)->create();
+        // Le sale prenotabili di prova, con nomi veri (la factory, con i nomi finti di Faker, serve solo ai test)
+        $bookables = $this->seedBookables();
 
         // Per ogni sala creiamo gli orari di disponibilità
         foreach ($bookables as $bookable) {
@@ -39,6 +39,29 @@ class DatabaseSeeder extends Seeder
                 ]);
             }
         }
+    }
+
+    /**
+     * Crea le sale prenotabili di prova, con nomi e descrizioni comprensibili.
+     * Il nome non è unico per vincolo del database, ma qui sono tutti diversi.
+     *
+     * @return \Illuminate\Support\Collection<int, Bookable>
+     */
+    private function seedBookables(): \Illuminate\Support\Collection
+    {
+        // [nome, descrizione, durata dello slot in minuti]
+        $rooms = [
+            ['Sala corsi', 'Ampia sala con specchi e parquet, per lezioni di gruppo e allenamenti a corpo libero.', 30],
+            ['Sala pesi', 'Attrezzi liberi, panche e rack per l\'allenamento con i pesi.', 60],
+            ['Studio personal training', 'Piccolo studio riservato per sedute individuali con un istruttore.', 30],
+        ];
+
+        return collect($rooms)->map(fn (array $room) => Bookable::create([
+            'name' => $room[0],
+            'description' => $room[1],
+            'slot_minutes' => $room[2],
+            'is_active' => true, // create() non applica i default del database: si indica esplicitamente
+        ]));
     }
 
     /**
