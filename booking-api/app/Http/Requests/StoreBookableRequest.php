@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Creazione di una risorsa prenotabile. Il permesso (solo admin) lo dà la rotta: can:admin. */
+/** Creazione di una sala prenotabile. Il permesso (solo admin) lo dà la rotta: can:admin. */
 class StoreBookableRequest extends FormRequest
 {
     public function authorize(): bool

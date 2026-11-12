@@ -38,7 +38,7 @@ class User extends Authenticatable
         ];
     }
 
-    /** Le prenotazioni di risorse (sale, slot) fatte dall'utente. */
+    /** Le prenotazioni di sale (sale, slot) fatte dall'utente. */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);

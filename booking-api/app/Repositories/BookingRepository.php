@@ -20,7 +20,7 @@ class BookingRepository
      *
      * @param  array{page?: int, per_page?: int, sort_by?: string, sort_direction?: string, search?: ?string, status?: ?string}  $filters
      *                                                                                                                                  Parametri già validati da IndexBookingRequest
-     * @return LengthAwarePaginator<int, Booking> con risorsa e utente già caricati (niente query N+1)
+     * @return LengthAwarePaginator<int, Booking> con sala e utente già caricati (niente query N+1)
      */
     public function paginateFor(User $user, array $filters): LengthAwarePaginator
     {
@@ -35,7 +35,7 @@ class BookingRepository
             $query->where('user_id', $user->id);
         }
 
-        // Ricerca per nome della risorsa e, per l'admin, nome dell'utente.
+        // Ricerca per nome della sala e, per l'admin, nome dell'utente.
         if (! empty($filters['search'])) {
             $search = $filters['search'];
 

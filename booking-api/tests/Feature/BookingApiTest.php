@@ -17,12 +17,12 @@ class BookingApiTest extends TestCase
     // Prima di ogni test ricrea tutte le tabelle da zero (database "testing")
     use RefreshDatabase;
 
-    // La risorsa prenotabile usata in tutti i test (presa dal seeder)
+    // La sala prenotabile usata in tutti i test (presa dal seeder)
     protected Bookable $bookable;
 
     /**
      * Eseguito prima di ogni singolo test: riempie il db con il seeder
-     * (admin + 3 risorse con orari lun-ven 9-13 e 15-19) e sceglie una risorsa.
+     * (admin + 3 sale con orari lun-ven 9-13 e 15-19) e sceglie una sala.
      */
     protected function setUp(): void
     {
@@ -80,21 +80,21 @@ class BookingApiTest extends TestCase
         $this->getJson('/api/bookings')->assertUnauthorized();
     }
 
-    /** Un utente loggato vede l'elenco delle risorse. */
+    /** Un utente loggato vede l'elenco delle sale. */
     public function test_user_can_list_bookables(): void
     {
         $this->loginAsUser();
         $this->getJson('/api/bookables')->assertOk();
     }
 
-    /** Un utente normale non può cancellare una risorsa (Gate 'admin'). */
+    /** Un utente normale non può cancellare una sala (Gate 'admin'). */
     public function test_normal_user_cannot_delete_bookable(): void
     {
         $this->loginAsUser();
         $this->deleteJson("/api/bookables/{$this->bookable->id}")->assertForbidden();
     }
 
-    /** L'admin può cancellare una risorsa. */
+    /** L'admin può cancellare una sala. */
     public function test_admin_can_delete_bookable(): void
     {
         $this->loginAsAdmin();
@@ -207,20 +207,20 @@ class BookingApiTest extends TestCase
         return $this->firstSlot();
     }
 
-        // ---------- Elenco risorse e parametro ?all=1 ----------
+        // ---------- Elenco sale e parametro ?all=1 ----------
 
-    /** Supporto: crea una risorsa disattivata (is_active = false) e la restituisce. */
+    /** Supporto: crea una sala disattivata (is_active = false) e la restituisce. */
     private function createInactiveBookable(): Bookable
     {
         return Bookable::create([
-            'name'         => 'Risorsa disattivata',
+            'name'         => 'Sala disattivata',
             'description'  => null,
             'slot_minutes' => 30,
             'is_active'    => false,
         ]);
     }
 
-    /** Un utente normale che invia ?all=1 riceve comunque solo le risorse attive. */
+    /** Un utente normale che invia ?all=1 riceve comunque solo le sale attive. */
     public function test_normal_user_with_all_param_gets_only_active_bookables(): void
     {
         $inactive = $this->createInactiveBookable();
@@ -228,14 +228,14 @@ class BookingApiTest extends TestCase
 
         $response = $this->getJson('/api/bookables?all=1')->assertOk();
 
-        // Estrae gli id delle risorse restituite
+        // Estrae gli id delle sale restituite
         $ids = collect($response->json('data'))->pluck('id');
 
         $this->assertTrue($ids->contains($this->bookable->id));   // l'attiva c'è
         $this->assertFalse($ids->contains($inactive->id));        // la disattivata no
     }
 
-    /** L'admin che invia ?all=1 vede anche le risorse disattivate. */
+    /** L'admin che invia ?all=1 vede anche le sale disattivate. */
     public function test_admin_with_all_param_gets_inactive_bookables_too(): void
     {
         $inactive = $this->createInactiveBookable();
@@ -250,18 +250,18 @@ class BookingApiTest extends TestCase
 
         // ---------- Fasce orarie (availabilities) ----------
 
-    /** Supporto: crea una risorsa NUOVA e senza fasce orarie (a differenza di quelle del seeder). */
+    /** Supporto: crea una sala NUOVA e senza fasce orarie (a differenza di quelle del seeder). */
     private function createEmptyBookable(int $slotMinutes = 30): Bookable
     {
         return Bookable::create([
-            'name'         => 'Risorsa senza orari',
+            'name'         => 'Sala senza orari',
             'description'  => null,
             'slot_minutes' => $slotMinutes,
             'is_active'    => true,
         ]);
     }
 
-    /** Supporto: invia la richiesta per aggiungere una fascia a una risorsa. */
+    /** Supporto: invia la richiesta per aggiungere una fascia a una sala. */
     private function addAvailability(Bookable $bookable, int $day, string $start, string $end)
     {
         return $this->postJson("/api/bookables/{$bookable->id}/availabilities", [

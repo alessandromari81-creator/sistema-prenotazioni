@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Nuova prenotazione: si indica la risorsa e l'inizio. La fine si ricava dalla durata
+ * Nuova prenotazione: si indica la sala e l'inizio. La fine si ricava dalla durata
  * dello slot. Le regole che dipendono dal database (fascia oraria, slot occupato)
  * restano nel controller, dentro la transazione.
  */

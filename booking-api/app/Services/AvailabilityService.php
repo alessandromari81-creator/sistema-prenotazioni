@@ -7,7 +7,7 @@ use App\Models\Bookable;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Le regole sulle fasce orarie settimanali di una risorsa.
+ * Le regole sulle fasce orarie settimanali di una sala.
  */
 class AvailabilityService
 {
@@ -40,7 +40,7 @@ class AvailabilityService
             ]);
         }
 
-        // Crea la fascia collegata alla risorsa (bookable_id viene impostato in automatico)
+        // Crea la fascia collegata alla sala (bookable_id viene impostato in automatico)
         return $bookable->availabilities()->create([
             'day_of_week' => $data['day_of_week'],
             'start_time' => $start,

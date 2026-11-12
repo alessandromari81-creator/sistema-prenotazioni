@@ -22,10 +22,10 @@ class DatabaseSeeder extends Seeder
         $this->seedUsers();
         $this->seedGym();
 
-        // Crea 3 risorse prenotabili di prova usando la factory
+        // Crea 3 sale prenotabili di prova usando la factory
         $bookables = Bookable::factory()->count(3)->create();
 
-        // Per ogni risorsa creiamo gli orari di disponibilità
+        // Per ogni sala creiamo gli orari di disponibilità
         foreach ($bookables as $bookable) {
             // Giorni da 1 a 5: da lunedì a venerdì (standard ISO)
             foreach ([1, 2, 3, 4, 5] as $day) {

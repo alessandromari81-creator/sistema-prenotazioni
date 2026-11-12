@@ -17,7 +17,7 @@ class AvailabilityController extends Controller
     }
 
     /**
-     * Aggiunge una fascia oraria a una risorsa (solo admin).
+     * Aggiunge una fascia oraria a una sala (solo admin).
      * Richiesta: POST /api/bookables/{id}/availabilities
      * con { day_of_week: 1-7, start_time: "09:00", end_time: "13:00" }
      * Il formato è controllato da StoreAvailabilityRequest, la regola sulle sovrapposizioni dal servizio.

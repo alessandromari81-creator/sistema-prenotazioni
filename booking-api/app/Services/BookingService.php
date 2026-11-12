@@ -20,27 +20,27 @@ use Illuminate\Validation\ValidationException;
 class BookingService
 {
     /**
-     * Crea una prenotazione per $user sulla risorsa indicata, a partire da $startsAt (un istante, in UTC).
-     * La fine si ricava dalla durata dello slot. Tutto avviene in una transazione con lock sulla risorsa,
+     * Crea una prenotazione per $user sulla sala indicata, a partire da $startsAt (un istante, in UTC).
+     * La fine si ricava dalla durata dello slot. Tutto avviene in una transazione con lock sulla sala,
      * così due richieste simultanee non possono prenotare lo stesso slot.
      *
-     * @throws ValidationException se la risorsa non è prenotabile, l'orario è fuori disponibilità,
+     * @throws ValidationException se la sala non è prenotabile, l'orario è fuori disponibilità,
      *                             non coincide con l'inizio di uno slot oppure lo slot è già occupato
      */
     public function create(User $user, int $bookableId, string $startsAt): Booking
     {
         $booking = DB::transaction(function () use ($user, $bookableId, $startsAt) {
 
-            // Blocca la risorsa durante la creazione della prenotazione
+            // Blocca la sala durante la creazione della prenotazione
             $bookable = Bookable::lockForUpdate()->findOrFail($bookableId);
 
             if (! $bookable->is_active) {
                 throw ValidationException::withMessages([
-                    'bookable_id' => ['Questa risorsa non è prenotabile.'],
+                    'bookable_id' => ['Questa sala non è prenotabile.'],
                 ]);
             }
 
-            // Fuso orario della risorsa (es. Europe/Rome)
+            // Fuso orario della sala (es. Europe/Rome)
             $timezone = config('timezone.default');
 
             // L'istante ricevuto è in UTC
@@ -59,7 +59,7 @@ class BookingService
 
             if (! $window) {
                 throw ValidationException::withMessages([
-                    'starts_at' => ['Orario fuori dalla disponibilità della risorsa.'],
+                    'starts_at' => ['Orario fuori dalla disponibilità della sala.'],
                 ]);
             }
 

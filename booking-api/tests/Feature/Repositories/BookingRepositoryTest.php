@@ -97,7 +97,7 @@ class BookingRepositoryTest extends TestCase
 
     public function test_a_normal_user_cannot_search_by_user_name(): void
     {
-        // Per l'utente normale la ricerca guarda solo il nome della risorsa: non può "scoprire" gli altri
+        // Per l'utente normale la ricerca guarda solo il nome della sala: non può "scoprire" gli altri
         $this->booking($this->mario, $this->sala, '2030-01-10 09:00:00');
         $this->booking($this->anna, $this->sala, '2030-01-10 10:00:00');
 
@@ -156,7 +156,7 @@ class BookingRepositoryTest extends TestCase
 
         $booking = $this->repository->paginateFor($this->mario, [])->items()[0];
 
-        // Niente query nascoste quando poi la Resource legge risorsa e utente (problema N+1)
+        // Niente query nascoste quando poi la Resource legge sala e utente (problema N+1)
         $this->assertTrue($booking->relationLoaded('bookable'));
         $this->assertTrue($booking->relationLoaded('user'));
     }

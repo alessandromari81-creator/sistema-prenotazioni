@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Parametri di ricerca, ordinamento e paginazione dell'elenco risorse. */
+/** Parametri di ricerca, ordinamento e paginazione dell'elenco sale. */
 class IndexBookableRequest extends FormRequest
 {
     public function authorize(): bool

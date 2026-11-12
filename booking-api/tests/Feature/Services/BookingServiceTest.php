@@ -35,7 +35,7 @@ class BookingServiceTest extends TestCase
         $this->service = app(BookingService::class);
         $this->user = User::factory()->create(['role' => 'user']);
 
-        // Una risorsa con slot da 30 minuti, prenotabile il lunedì dalle 9 alle 13 (ora di Roma)
+        // Una sala con slot da 30 minuti, prenotabile il lunedì dalle 9 alle 13 (ora di Roma)
         $this->bookable = Bookable::factory()->create(['slot_minutes' => 30, 'is_active' => true]);
         Availability::factory()->create([
             'bookable_id' => $this->bookable->id,
@@ -91,7 +91,7 @@ class BookingServiceTest extends TestCase
         $this->assertInvalid(
             fn () => $this->service->create($this->user, $this->bookable->id, $this->mondayAt('09:00')),
             'bookable_id',
-            'Questa risorsa non è prenotabile.'
+            'Questa sala non è prenotabile.'
         );
         $this->assertDatabaseCount('bookings', 0);
     }
@@ -102,7 +102,7 @@ class BookingServiceTest extends TestCase
         $this->assertInvalid(
             fn () => $this->service->create($this->user, $this->bookable->id, $this->mondayAt('14:00')),
             'starts_at',
-            'Orario fuori dalla disponibilità della risorsa.'
+            'Orario fuori dalla disponibilità della sala.'
         );
     }
 
@@ -112,7 +112,7 @@ class BookingServiceTest extends TestCase
         $this->assertInvalid(
             fn () => $this->service->create($this->user, $this->bookable->id, $this->mondayAt('12:45')),
             'starts_at',
-            'Orario fuori dalla disponibilità della risorsa.'
+            'Orario fuori dalla disponibilità della sala.'
         );
     }
 

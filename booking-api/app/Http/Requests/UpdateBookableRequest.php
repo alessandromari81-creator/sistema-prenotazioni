@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Modifica di una risorsa: "sometimes" permette di inviare anche un solo campo. */
+/** Modifica di una sala: "sometimes" permette di inviare anche un solo campo. */
 class UpdateBookableRequest extends FormRequest
 {
     public function authorize(): bool

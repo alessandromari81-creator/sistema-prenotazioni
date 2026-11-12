@@ -27,9 +27,12 @@ Route::middleware(['auth:keycloak', 'throttle:api'])->group(function () {
     // L'utente a cui appartiene il token (il frontend lo chiama dopo il login)
     Route::get('/user', [UserController::class, 'me']);
 
-    // Consultazione: tutti gli utenti autenticati possono vedere le risorse.
+    // Il proprio profilo: l'utente modifica i dati che appartengono all'applicazione (l'indirizzo)
+    Route::put('/user', [UserController::class, 'update']);
+
+    // Consultazione: tutti gli utenti autenticati possono vedere le sale.
     // Il nome {bookable} deve coincidere con il parametro $bookable del controller,
-    // così Laravel trova da solo la risorsa (route model binding)
+    // così Laravel trova da solo la sala (route model binding)
     Route::get('/bookables', [BookableController::class, 'index']);
     Route::get('/bookables/{bookable}', [BookableController::class, 'show']);
 
@@ -40,7 +43,7 @@ Route::middleware(['auth:keycloak', 'throttle:api'])->group(function () {
         Route::put('/bookables/{bookable}', [BookableController::class, 'update']);
         Route::delete('/bookables/{bookable}', [BookableController::class, 'destroy']);
 
-        // Fasce orarie di una risorsa: aggiunta ed eliminazione
+        // Fasce orarie di una sala: aggiunta ed eliminazione
         Route::post('/bookables/{bookable}/availabilities', [AvailabilityController::class, 'store']);
         Route::delete('/availabilities/{availability}', [AvailabilityController::class, 'destroy']);
 
@@ -82,7 +85,7 @@ Route::middleware(['auth:keycloak', 'throttle:api'])->group(function () {
     Route::get('/me/teaching', [MeController::class, 'teaching']);
     Route::get('/me/subscription', [MeController::class, 'subscription']);
 
-    // Slot liberi di una risorsa per un giorno: ?date=AAAA-MM-GG
+    // Slot liberi di una sala per un giorno: ?date=AAAA-MM-GG
     Route::get('/bookables/{bookable}/slots', [BookableController::class, 'slots']);
 
     // Prenotazioni: elenco, creazione e annullamento

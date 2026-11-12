@@ -31,7 +31,7 @@ info:
     - **Utente**: consulta corsi e piani, si iscrive e annulla la propria iscrizione, prenota sale.
     - **Istruttore**: non è un ruolo globale ma un'assegnazione a un corso. Vede gli iscritti dei corsi che insegna.
       Può essere studente di un altro corso, ma **mai** istruttore e studente dello stesso corso.
-    - **Admin**: gestisce corsi, istruttori, piani e abbonamenti, risorse e fasce orarie.
+    - **Admin**: gestisce corsi, istruttori, piani e abbonamenti, sale e fasce orarie.
 
     ## Errori comuni
     - `401` token mancante, scaduto o non valido: `{"message": "Non autenticato."}`
@@ -41,7 +41,7 @@ info:
     - `429` troppe richieste (120 al minuto per utente), con `retry_after` in secondi e header `Retry-After`
 
     ## Date e orari
-    Gli istanti delle prenotazioni sono in **UTC** (ISO 8601). Le fasce orarie delle risorse e l'orario dei corsi
+    Gli istanti delle prenotazioni sono in **UTC** (ISO 8601). Le fasce orarie delle sale e l'orario dei corsi
     sono nell'orario di Roma. `day_of_week`: 1 = lunedì ... 7 = domenica. Le date degli abbonamenti sono giorni
     (`AAAA-MM-GG`, estremi inclusi).
 
@@ -64,12 +64,12 @@ tags:
     description: Iscriversi a un corso e vedere le proprie iscrizioni
   - name: Abbonamenti
     description: Piani di abbonamento e abbonamenti assegnati agli utenti
-  - name: Risorse
-    description: Risorse prenotabili (sale, campi...). Scrittura solo per gli admin
+  - name: Sale
+    description: Le sale che si possono prenotare. Scrittura solo per gli admin
   - name: Fasce orarie
-    description: Quando una risorsa è prenotabile. Solo admin
+    description: Quando una sala è prenotabile. Solo admin
   - name: Prenotazioni
-    description: Slot liberi, elenco, creazione e annullamento delle prenotazioni di risorse
+    description: Slot liberi, elenco, creazione e annullamento delle prenotazioni di sale
 
 security:
   - keycloak: [openid, profile, email]
@@ -93,12 +93,38 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+    put:
+      tags: [Utenti]
+      summary: Modifica il proprio profilo
+      description: |
+        Aggiorna i dati del profilo che appartengono all'applicazione: per ora l'indirizzo (`null` o testo vuoto lo cancella).
+        **Nome ed email non si cambiano da qui**: sono di Keycloak e Laravel li riallinea al token a ogni richiesta, quindi un
+        valore cambiato qui verrebbe sovrascritto. Anche se vengono inviati, vengono ignorati. Si modifica sempre e solo il
+        proprio profilo: l'utente è quello a cui appartiene il token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Il profilo aggiornato (stessa forma di GET /api/user).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /api/bookables:
     get:
-      tags: [Risorse]
-      summary: Elenco delle risorse prenotabili
+      tags: [Sale]
+      summary: Elenco delle sale prenotabili
       description: |
-        Paginato, con le fasce orarie incluse. Di default solo le risorse attive; l'admin può chiedere anche
+        Paginato, con le fasce orarie incluse. Di default solo le sale attive; l'admin può chiedere anche
         quelle disattivate con `all=1`.
       parameters:
         - $ref: '#/components/parameters/Page'
@@ -115,11 +141,11 @@ paths:
           schema: { type: string, maxLength: 100 }
         - name: all
           in: query
-          description: Se `1` e l'utente è admin, include le risorse disattivate. Per gli altri è ignorato.
+          description: Se `1` e l'utente è admin, include le sale disattivate. Per gli altri è ignorato.
           schema: { type: boolean }
       responses:
         '200':
-          description: Pagina di risorse.
+          description: Pagina di sale.
           content:
             application/json:
               schema:
@@ -129,8 +155,8 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
     post:
-      tags: [Risorse]
-      summary: Crea una risorsa (admin)
+      tags: [Sale]
+      summary: Crea una sala (admin)
       requestBody:
         required: true
         content:
@@ -139,7 +165,7 @@ paths:
               $ref: '#/components/schemas/StoreBookableRequest'
       responses:
         '201':
-          description: Risorsa creata.
+          description: Sala creata.
           content:
             application/json:
               schema:
@@ -155,12 +181,12 @@ paths:
     parameters:
       - $ref: '#/components/parameters/BookableId'
     get:
-      tags: [Risorse]
-      summary: Dettaglio di una risorsa
+      tags: [Sale]
+      summary: Dettaglio di una sala
       description: Include le fasce orarie.
       responses:
         '200':
-          description: La risorsa.
+          description: La sala.
           content:
             application/json:
               schema:
@@ -170,8 +196,8 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     put:
-      tags: [Risorse]
-      summary: Modifica una risorsa (admin)
+      tags: [Sale]
+      summary: Modifica una sala (admin)
       description: Si può inviare anche un solo campo.
       requestBody:
         required: true
@@ -181,7 +207,7 @@ paths:
               $ref: '#/components/schemas/UpdateBookableRequest'
       responses:
         '200':
-          description: La risorsa aggiornata.
+          description: La sala aggiornata.
           content:
             application/json:
               schema:
@@ -195,8 +221,8 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
     delete:
-      tags: [Risorse]
-      summary: Elimina una risorsa (admin)
+      tags: [Sale]
+      summary: Elimina una sala (admin)
       description: Elimina anche le sue fasce orarie e le sue prenotazioni (cancellazione a cascata).
       responses:
         '204':
@@ -262,7 +288,7 @@ paths:
       - $ref: '#/components/parameters/BookableId'
     get:
       tags: [Prenotazioni]
-      summary: Slot liberi di una risorsa per un giorno
+      summary: Slot liberi di una sala per un giorno
       description: |
         Calcola gli slot dalle fasce orarie (orario di Roma) e toglie quelli già prenotati o nel passato.
         Gli istanti restituiti sono in UTC.
@@ -292,7 +318,7 @@ paths:
     get:
       tags: [Prenotazioni]
       summary: Elenco delle prenotazioni
-      description: L'utente vede solo le proprie prenotazioni, l'admin tutte. Include risorsa e utente.
+      description: L'utente vede solo le proprie prenotazioni, l'admin tutte. Include sala e utente.
       parameters:
         - $ref: '#/components/parameters/Page'
         - name: per_page
@@ -304,7 +330,7 @@ paths:
         - $ref: '#/components/parameters/SortDirection'
         - name: search
           in: query
-          description: Nome della risorsa; per l'admin anche nome dell'utente.
+          description: Nome della sala; per l'admin anche nome dell'utente.
           schema: { type: string, maxLength: 100 }
         - name: status
           in: query
@@ -324,8 +350,8 @@ paths:
       tags: [Prenotazioni]
       summary: Crea una prenotazione
       description: |
-        Si indicano la risorsa e l'inizio; la fine si ricava dalla durata dello slot. Avviene in una transazione
-        con lock sulla risorsa. Errori 422 possibili: risorsa non prenotabile, orario fuori dalla disponibilità,
+        Si indicano la sala e l'inizio; la fine si ricava dalla durata dello slot. Avviene in una transazione
+        con lock sulla sala. Errori 422 possibili: sala non prenotabile, orario fuori dalla disponibilità,
         orario che non coincide con l'inizio di uno slot, slot già prenotato. Dopo il salvataggio l'utente
         riceve una notifica.
       requestBody:
@@ -1237,7 +1263,7 @@ components:
         day_of_week: { type: integer, minimum: 1, maximum: 7 }
         start_time: { type: string, example: '18:30', description: 'Formato HH:MM.' }
         duration_minutes: { type: integer, minimum: 15, maximum: 240 }
-        bookable_id: { type: integer, nullable: true, description: 'La sala (una risorsa esistente).' }
+        bookable_id: { type: integer, nullable: true, description: 'La sala in cui si tiene il corso (una sala esistente).' }
         is_active: { type: boolean, default: true }
 
     UpdateCourseRequest:
@@ -1279,3 +1305,8 @@ components:
       properties:
         subscription_plan_id: { type: integer, description: 'Un piano attivo.' }
         starts_on: { type: string, format: date, nullable: true, description: 'Giorno di inizio, da oggi in poi. Se manca, oggi.' }
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        address: { type: string, nullable: true, maxLength: 255, description: 'Indirizzo dell''utente. Vuoto o null lo cancella.' }

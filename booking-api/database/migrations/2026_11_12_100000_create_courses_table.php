@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * I corsi della palestra (yoga, spinning...). Ogni corso si tiene una volta a settimana, in un giorno e a un'ora fissi,
- * ha un numero massimo di posti e può indicare la sala (una risorsa prenotabile) in cui si svolge.
+ * ha un numero massimo di posti e può indicare la sala (una sala prenotabile) in cui si svolge.
  */
 return new class extends Migration
 {
@@ -20,7 +20,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('day_of_week');               // 1 = lunedì ... 7 = domenica
             $table->time('start_time');                               // ora di inizio (ora di Roma)
             $table->unsignedSmallInteger('duration_minutes');         // durata della lezione
-            // La sala è facoltativa: se la risorsa viene eliminata il corso resta, senza sala
+            // La sala è facoltativa: se la sala viene eliminata il corso resta, senza sala
             $table->foreignId('bookable_id')->nullable()->constrained()->nullOnDelete();
             $table->boolean('is_active')->default(true);              // un corso disattivato non accetta nuove iscrizioni
             $table->timestamps();

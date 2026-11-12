@@ -19,7 +19,7 @@ class BookableController extends Controller
     }
 
     /**
-     * Restituisce l'elenco delle risorse prenotabili con i propri orari di disponibilità.
+     * Restituisce l'elenco delle sale prenotabili con i propri orari di disponibilità.
      * Di default solo quelle attive; l'admin può chiedere anche le disattivate con ?all=1.
     */
     public function index(IndexBookableRequest $request): JsonResponse
@@ -30,7 +30,7 @@ class BookableController extends Controller
         $query = Bookable::query()
             ->with('availabilities');
 
-        // Risorse disattivate visibili solo agli admin
+        // Sale disattivate visibili solo agli admin
         $includeInactive = $request->boolean('all')
             && $request->user()?->can('admin');
 
@@ -52,7 +52,7 @@ class BookableController extends Controller
         // Paginazione
         $perPage = $validated['per_page'] ?? 10;
 
-        // through() trasforma ogni risorsa con BookableResource ma lascia intatto il
+        // through() trasforma ogni sala con BookableResource ma lascia intatto il
         // paginatore (current_page, total, ...) che il frontend già legge
         return response()->json(
             $query->paginate($perPage)
@@ -61,34 +61,34 @@ class BookableController extends Controller
     }
 
     /**
-     * Crea una nuova risorsa prenotabile (la useranno solo gli admin).
+     * Crea una nuova sala prenotabile (la useranno solo gli admin).
      */
     public function store(StoreBookableRequest $request): JsonResponse
     {
         // I dati sono già validati da StoreBookableRequest (se no, 422 automatico).
-        // Crea la risorsa con i soli campi validati (sono tutti in $fillable)
+        // Crea la sala con i soli campi validati (sono tutti in $fillable)
         $bookable = Bookable::create($request->validated());
 
-        // 201 = risorsa creata; restituiamo la risorsa appena salvata
+        // 201 = sala creata; restituiamo la sala appena salvata
         return (new BookableResource($bookable))->response()->setStatusCode(201);
     }
 
     /**
-     * Restituisce una singola risorsa prenotabile con i suoi orari di disponibilità.
+     * Restituisce una singola sala prenotabile con i suoi orari di disponibilità.
      */
     public function show(Bookable $bookable): BookableResource
     {
         // Il modello è già stato trovato da Laravel in base all'id nell'indirizzo
         // (route model binding): se l'id non esiste risponde da solo con un 404.
-        // load('availabilities') carica gli orari collegati a questa risorsa
+        // load('availabilities') carica gli orari collegati a questa sala
         $bookable->load('availabilities');
 
-        // Restituisce la risorsa in formato JSON
+        // Restituisce la sala in formato JSON
         return new BookableResource($bookable);
     }
 
     /**
-     * Modifica una risorsa prenotabile esistente (la useranno solo gli admin).
+     * Modifica una sala prenotabile esistente (la useranno solo gli admin).
      */
     public function update(UpdateBookableRequest $request, Bookable $bookable): BookableResource
     {
@@ -96,16 +96,16 @@ class BookableController extends Controller
         // si può modificare anche un solo campo alla volta), poi salva nel database
         $bookable->update($request->validated());
 
-        // Restituisce la risorsa aggiornata (stato 200 di default)
+        // Restituisce la sala aggiornata (stato 200 di default)
         return new BookableResource($bookable);
     }
 
     /**
-     * Elimina una risorsa prenotabile (la useranno solo gli admin).
+     * Elimina una sala prenotabile (la useranno solo gli admin).
      */
     public function destroy(Bookable $bookable): JsonResponse
     {
-        // Cancella la risorsa dal database. Grazie al cascadeOnDelete delle migrazioni
+        // Cancella la sala dal database. Grazie al cascadeOnDelete delle migrazioni
         // vengono cancellate in automatico anche le sue disponibilità e le sue prenotazioni
         $bookable->delete();
 
@@ -114,7 +114,7 @@ class BookableController extends Controller
     }
 
     /**
-     * Restituisce gli slot ancora liberi di una risorsa per un certo giorno.
+     * Restituisce gli slot ancora liberi di una sala per un certo giorno.
      * Richiesta: GET /api/bookables/{id}/slots?date=2026-11-10
      */
     public function slots(SlotsRequest $request, Bookable $bookable): JsonResponse

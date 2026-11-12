@@ -6,12 +6,12 @@ use App\Models\Bookable;
 use Illuminate\Support\Carbon;
 
 /**
- * Calcola gli slot ancora liberi di una risorsa in un certo giorno.
+ * Calcola gli slot ancora liberi di una sala in un certo giorno.
  */
 class SlotService
 {
     /**
-     * Slot liberi di $bookable per il giorno $date (formato AAAA-MM-GG, nel fuso orario della risorsa).
+     * Slot liberi di $bookable per il giorno $date (formato AAAA-MM-GG, nel fuso orario della sala).
      * Le fasce orarie sono nell'orario di Roma; gli istanti restituiti sono in UTC (ISO 8601).
      * Gli slot già prenotati e quelli nel passato non compaiono.
      *
@@ -24,7 +24,7 @@ class SlotService
 
         $day = Carbon::createFromFormat('!Y-m-d', $date, $timezoneUser);
 
-        // Fasce orarie della risorsa
+        // Fasce orarie della sala
         $windows = $bookable->availabilities()
             ->where('day_of_week', $day->dayOfWeekIso)
             ->orderBy('start_time')

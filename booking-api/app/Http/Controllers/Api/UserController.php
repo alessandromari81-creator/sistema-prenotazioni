@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\IndexUserRequest;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -18,14 +19,34 @@ class UserController extends Controller
 {
     /**
      * Restituisce il profilo dell'utente a cui appartiene il token (GET /api/user).
-     * Il frontend lo chiama dopo il login per sapere nome, ruolo e se l'utente insegna in qualche corso.
+     * Il frontend lo chiama dopo il login per sapere nome, ruolo, indirizzo e se l'utente insegna in qualche corso.
      */
     public function me(Request $request): JsonResponse
     {
+        return $this->profile($request->user());
+    }
+
+    /**
+     * Aggiorna i dati del proprio profilo che appartengono all'applicazione (PUT /api/user): per ora l'indirizzo.
+     * Nome ed email non si cambiano qui: sono di Keycloak e verrebbero riallineati al token alla richiesta successiva.
+     * Ognuno può modificare solo il proprio profilo: l'utente è sempre quello a cui appartiene il token.
+     */
+    public function update(UpdateProfileRequest $request): JsonResponse
+    {
         $user = $request->user();
+        $user->update($request->validated());
+
+        return $this->profile($user);
+    }
+
+    /**
+     * La risposta con il profilo di $user, con l'informazione "insegna in almeno un corso".
+     * Lo stato è 200 esplicito: al primo accesso il profilo è appena stato creato e una Resource risponderebbe 201.
+     */
+    private function profile(User $user): JsonResponse
+    {
         $user->loadExists('taughtCourses as teaches_courses');
 
-        // Stato 200 esplicito: al primo accesso il profilo è appena stato creato e una Resource risponderebbe 201
         return (new UserResource($user))->response()->setStatusCode(200);
     }
 
