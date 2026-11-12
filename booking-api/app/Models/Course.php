@@ -61,6 +61,12 @@ class Course extends Model
         return $this->enrollments()->where('status', Enrollment::ACTIVE);
     }
 
+    /** I materiali PDF del corso. */
+    public function materials(): HasMany
+    {
+        return $this->hasMany(CourseMaterial::class);
+    }
+
     /** La sala in cui si tiene il corso, se indicata. */
     public function bookable(): BelongsTo
     {

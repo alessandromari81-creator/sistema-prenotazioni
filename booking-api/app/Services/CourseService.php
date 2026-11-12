@@ -15,6 +15,10 @@ use Illuminate\Validation\ValidationException;
  */
 class CourseService
 {
+    public function __construct(private readonly CourseMaterialService $materials)
+    {
+    }
+
     /**
      * Crea un corso con i dati già validati (nome, posti, giorno, ora, durata, sala, stato).
      *
@@ -71,6 +75,7 @@ class CourseService
         }
 
         $this->deleteImageFile($course);
+        $this->materials->deleteFilesOf($course);
         $course->delete();
     }
 

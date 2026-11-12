@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { expectNoA11yViolations } from '../../../../testing/a11y';
 import { Course, Enrollment } from '../../../core/models/models';
+import { FileSaverService } from '../../../core/services/features/file-saver.service';
 import { AuthService } from '../../../core/services/http/auth.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { CourseDetailComponent } from './course-detail.component';
@@ -18,6 +19,8 @@ function course(overrides: Partial<Course> = {}): Course {
   };
 }
 
+const material = { id: 5, course_id: 7, title: 'Scheda di allenamento', size_bytes: 120 * 1024, created_at: null };
+
 const students: Enrollment[] = [
   { id: 1, course_id: 7, user_id: 4, status: 'active', created_at: null, student: { id: 4, name: 'Mario Rossi', email: 'mario@example.com' } },
 ];
@@ -25,13 +28,20 @@ const students: Enrollment[] = [
 describe('CourseDetailComponent', () => {
   // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
   const notify = { success: vi.fn(), error: vi.fn() };
+  const fileSaver = { save: vi.fn() }; // il salvataggio vero passa dal browser: nei test si controlla solo come viene chiamato
+  let materialList = [material];
   beforeEach(() => {
     notify.success.mockReset();
     notify.error.mockReset();
+    fileSaver.save.mockClear();
+    materialList = [material];
   });
 
   let fixture: ComponentFixture<CourseDetailComponent>;
-  let api: { get: ReturnType<typeof vi.fn>; students: ReturnType<typeof vi.fn>; enroll: ReturnType<typeof vi.fn>; cancelEnrollment: ReturnType<typeof vi.fn> };
+  let api: {
+    get: ReturnType<typeof vi.fn>; students: ReturnType<typeof vi.fn>; enroll: ReturnType<typeof vi.fn>; cancelEnrollment: ReturnType<typeof vi.fn>;
+    materials: ReturnType<typeof vi.fn>; materialFile: ReturnType<typeof vi.fn>;
+  };
 
   async function render(c: Course | Error, isAdmin = false): Promise<HTMLElement> {
     api = {
@@ -39,11 +49,13 @@ describe('CourseDetailComponent', () => {
       students: vi.fn().mockReturnValue(of(students)),
       enroll: vi.fn(),
       cancelEnrollment: vi.fn(),
+      materials: vi.fn().mockReturnValue(of(materialList)),
+      materialFile: vi.fn().mockReturnValue(of(new Blob(['%PDF']))),
     };
 
     await TestBed.configureTestingModule({
       imports: [CourseDetailComponent],
-      providers: [{ provide: NotificationService, useValue: notify }, 
+      providers: [{ provide: NotificationService, useValue: notify }, { provide: FileSaverService, useValue: fileSaver },
         provideRouter([]),
         { provide: CourseService, useValue: api },
         { provide: AuthService, useValue: { isAdmin: () => isAdmin } },
@@ -166,6 +178,80 @@ describe('CourseDetailComponent', () => {
     const el = await render(new Error('404'));
 
     expect(el.querySelector('[role="alert"]')).not.toBeNull();
+  });
+
+  // ---------- materiali PDF ----------
+
+  it('chi non è iscritto non vede i materiali e non li chiede al server', async () => {
+    const el = await render(course({ is_enrolled: false }));
+
+    expect(el.querySelector('#materials-title')).toBeNull();
+    expect(api.materials).not.toHaveBeenCalled();
+  });
+
+  it('un iscritto vede i materiali con titolo e dimensione', async () => {
+    const el = await render(course({ is_enrolled: true }));
+
+    expect(api.materials).toHaveBeenCalledWith(7);
+    expect(text(el)).toContain('Scheda di allenamento');
+    expect(text(el)).toContain('PDF, 120 KB');
+  });
+
+  it('l\'istruttore e l\'admin vedono i materiali; solo l\'admin ha il collegamento per gestirli', async () => {
+    const instructor = await render(course({ is_instructor: true }));
+    expect(instructor.querySelector('#materials-title')).not.toBeNull();
+    expect(text(instructor)).not.toContain('Gestisci i materiali');
+    TestBed.resetTestingModule();
+
+    const admin = await render(course(), true);
+    expect(admin.querySelector('#materials-title')).not.toBeNull();
+    expect(text(admin)).toContain('Gestisci i materiali');
+  });
+
+  it('senza materiali lo scrive a parole', async () => {
+    materialList = [];
+    const el = await render(course({ is_enrolled: true }));
+
+    expect(text(el)).toContain('Nessun materiale per questo corso.');
+  });
+
+  it('"Scarica" chiede il file con il token (non è un link) e lo consegna al browser con il titolo', async () => {
+    const el = await render(course({ is_enrolled: true }));
+
+    el.querySelector<HTMLButtonElement>('button[aria-label="Scarica Scheda di allenamento"]')!.click();
+    fixture.detectChanges();
+
+    expect(api.materialFile).toHaveBeenCalledWith(7, 5);
+    expect(fileSaver.save).toHaveBeenCalledWith(expect.any(Blob), 'Scheda di allenamento.pdf');
+    expect(el.querySelector('a[href*="materials"]')).toBeNull(); // nessun indirizzo diretto al file nella pagina
+  });
+
+  it('se il permesso è sparito (403) lo dice e non scarica nulla', async () => {
+    const el = await render(course({ is_enrolled: true }));
+    api.materialFile.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+    el.querySelector<HTMLButtonElement>('button[aria-label="Scarica Scheda di allenamento"]')!.click();
+    fixture.detectChanges();
+
+    expect(notify.error).toHaveBeenCalledWith('Non hai accesso ai materiali di questo corso.');
+    expect(fileSaver.save).not.toHaveBeenCalled();
+  });
+
+  it('annullando l\'iscrizione i materiali spariscono dalla pagina', async () => {
+    const el = await render(course({ is_enrolled: true }));
+    api.cancelEnrollment.mockReturnValue(of(undefined));
+    api.get.mockReturnValue(of(course({ is_enrolled: false })));
+
+    Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes('Annulla iscrizione'))!.click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('#materials-title')).toBeNull();
+  });
+
+  it('con i materiali la pagina è accessibile', async () => {
+    const el = await render(course({ is_enrolled: true }));
+
+    await expectNoA11yViolations(el);
   });
 
   it('è accessibile (WCAG 2.2 AA, senza il contrasto)', async () => {

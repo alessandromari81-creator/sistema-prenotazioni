@@ -8,6 +8,7 @@ import { AdminAvailabilitiesComponent } from './pages/admin/admin-availabilities
 import { AdminBookableFormComponent } from './pages/admin/admin-bookable-form.component/admin-bookable-form.component';
 import { AdminBookablesComponent } from './pages/admin/admin-bookables.component/admin-bookables.component';
 import { AdminCourseFormComponent } from './pages/admin/admin-course-form/admin-course-form.component';
+import { AdminCourseMaterialsComponent } from './pages/admin/admin-course-materials/admin-course-materials.component';
 import { AdminCourseInstructorsComponent } from './pages/admin/admin-course-instructors/admin-course-instructors.component';
 import { AdminCoursesComponent } from './pages/admin/admin-courses/admin-courses.component';
 import { AdminPlanFormComponent } from './pages/admin/admin-plan-form/admin-plan-form.component';
@@ -56,6 +57,7 @@ export const routes: Routes = [
       { path: 'admin/courses/new', component: AdminCourseFormComponent, canActivate: [adminGuard], title: 'Nuovo corso - Palestra' },
       { path: 'admin/courses/:id/edit', component: AdminCourseFormComponent, canActivate: [adminGuard], title: 'Modifica corso - Palestra' },
       { path: 'admin/courses/:id/instructors', component: AdminCourseInstructorsComponent, canActivate: [adminGuard], title: 'Istruttori del corso - Palestra' },
+      { path: 'admin/courses/:id/materials', component: AdminCourseMaterialsComponent, canActivate: [adminGuard], title: 'Materiali del corso - Palestra' },
       { path: 'admin/plans', component: AdminPlansComponent, canActivate: [adminGuard], title: 'Piani di abbonamento - Palestra' },
       { path: 'admin/plans/new', component: AdminPlanFormComponent, canActivate: [adminGuard], title: 'Nuovo piano - Palestra' },
       { path: 'admin/plans/:id/edit', component: AdminPlanFormComponent, canActivate: [adminGuard], title: 'Modifica piano - Palestra' },

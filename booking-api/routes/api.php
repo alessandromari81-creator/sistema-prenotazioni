@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseImageController;
 use App\Http\Controllers\Api\CourseInstructorController;
+use App\Http\Controllers\Api\CourseMaterialController;
 use App\Http\Controllers\Api\CourseStudentController;
 use App\Http\Controllers\Api\EnrollmentController;
 use App\Http\Controllers\Api\MeController;
@@ -56,6 +57,8 @@ Route::middleware(['auth:keycloak', 'throttle:api'])->group(function () {
         Route::post('/courses', [CourseController::class, 'store']);
         Route::put('/courses/{course}', [CourseController::class, 'update']);
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+        Route::post('/courses/{course}/materials', [CourseMaterialController::class, 'store']);
+        Route::delete('/courses/{course}/materials/{material}', [CourseMaterialController::class, 'destroy'])->scopeBindings();
         Route::post('/courses/{course}/image', [CourseImageController::class, 'store']);
         Route::delete('/courses/{course}/image', [CourseImageController::class, 'destroy']);
         Route::put('/courses/{course}/instructors/{user}', [CourseInstructorController::class, 'store']);
@@ -76,6 +79,10 @@ Route::middleware(['auth:keycloak', 'throttle:api'])->group(function () {
     // Corsi: li consultano tutti gli utenti autenticati
     Route::get('/courses', [CourseController::class, 'index']);
     Route::get('/courses/{course}', [CourseController::class, 'show']);
+
+    // Materiali PDF di un corso: li vedono admin, istruttori del corso e iscritti (lo decide CoursePolicy nel controller)
+    Route::get('/courses/{course}/materials', [CourseMaterialController::class, 'index']);
+    Route::get('/courses/{course}/materials/{material}', [CourseMaterialController::class, 'show'])->scopeBindings();
 
     // Iscritti a un corso: solo admin e istruttori di quel corso (lo decide CoursePolicy nel controller)
     Route::get('/courses/{course}/students', [CourseStudentController::class, 'index']);

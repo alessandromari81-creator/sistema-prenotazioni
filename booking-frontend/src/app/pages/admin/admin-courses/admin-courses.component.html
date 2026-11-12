@@ -56,6 +56,9 @@
           <a mat-icon-button [routerLink]="['/admin/courses', c.id, 'instructors']" [attr.aria-label]="'Istruttori di ' + c.name">
             <mat-icon aria-hidden="true">groups</mat-icon>
           </a>
+          <a mat-icon-button [routerLink]="['/admin/courses', c.id, 'materials']" [attr.aria-label]="'Materiali di ' + c.name">
+            <mat-icon aria-hidden="true">attach_file</mat-icon>
+          </a>
           <a mat-icon-button [routerLink]="['/admin/courses', c.id, 'edit']" [attr.aria-label]="'Modifica ' + c.name">
             <mat-icon aria-hidden="true">edit</mat-icon>
           </a>

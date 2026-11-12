@@ -253,10 +253,10 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 ## Test
 
 ```bash
-# Backend: 276 test (PostgreSQL, database dedicato "testing")
+# Backend: 295 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
-# Frontend: 159 test (Vitest + axe-core)
+# Frontend: 184 test (Vitest + axe-core)
 cd booking-frontend && ng test --watch=false
 ```
 
@@ -287,6 +287,8 @@ funziona con il tuo token.
 | POST / PUT / DELETE | `/courses`, `/courses/{id}` | Crea, modifica, elimina un corso | admin |
 | GET | `/courses/{id}/image` | L'immagine del corso (pubblica: la legge un tag `<img>`) | nessuno |
 | POST / DELETE | `/courses/{id}/image` | Carica (multipart, JPEG/PNG/WebP fino a 2 MB) / toglie l'immagine | admin |
+| GET | `/courses/{id}/materials`, `/courses/{id}/materials/{material}` | Elenco e file PDF dei materiali (il file passa dall'API, con il token) | admin, istruttori del corso, iscritti |
+| POST / DELETE | `/courses/{id}/materials`, `/courses/{id}/materials/{material}` | Carica (multipart: `title` + `file` PDF fino a 10 MB) / elimina un materiale | admin |
 | PUT / DELETE | `/courses/{id}/instructors/{user}` | Assegna / toglie un istruttore | admin |
 | GET | `/courses/{id}/students` | Iscritti al corso | admin e istruttori del corso |
 | POST / DELETE | `/courses/{id}/enrollment` | Iscriviti / annulla la tua iscrizione (204 senza corpo: i dati aggiornati si rileggono con `GET /courses/{id}`) | autenticato |

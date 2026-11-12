@@ -787,6 +787,103 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/courses/{course}/materials:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    get:
+      tags: [Corsi]
+      summary: Elenco dei materiali PDF del corso
+      description: |
+        Lo vedono solo gli **amministratori**, gli **istruttori del corso** e chi ha un'**iscrizione valida** (un'iscrizione
+        annullata non basta). Per gli altri la risposta è 403. Il percorso del file sul disco non compare mai.
+      responses:
+        '200':
+          description: I materiali, dal più vecchio al più recente.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CourseMaterial'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Corsi]
+      summary: Carica un materiale PDF (admin)
+      description: |
+        Richiesta `multipart/form-data` con `title` (testo, massimo 150 caratteri) e `file` (solo PDF, controllato sul
+        contenuto vero e non solo sull'estensione; fino a 10 MB). Il file va in un disco privato con un nome casuale.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, file]
+              properties:
+                title: { type: string, maxLength: 150 }
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Il materiale creato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseMaterial'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/courses/{course}/materials/{material}:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+      - name: material
+        in: path
+        required: true
+        schema: { type: integer }
+        description: L'identificativo del materiale (deve appartenere al corso indicato, altrimenti 404).
+    get:
+      tags: [Corsi]
+      summary: Scarica il file PDF di un materiale
+      description: |
+        Stesso permesso dell'elenco (admin, istruttori del corso, iscritti con iscrizione valida). **Il file non ha un
+        indirizzo pubblico**: passa sempre da qui, con il token. Il frontend lo scarica con il token e lo apre come file
+        locale del browser. La risposta non va in cache condivise (`Cache-Control: private, no-store`).
+      responses:
+        '200':
+          description: Il PDF.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Corsi]
+      summary: Elimina un materiale (admin)
+      description: Cancella il file dal disco e la riga dal database. 204 senza corpo.
+      responses:
+        '204':
+          description: Eliminato.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/courses/{course}/instructors/{user}:
     parameters:
       - $ref: '#/components/parameters/CourseId'
@@ -1250,6 +1347,15 @@ components:
         is_instructor: { type: boolean, description: 'Vero se chi guarda è istruttore del corso.' }
         created_at: { type: string, format: date-time, nullable: true }
         updated_at: { type: string, format: date-time, nullable: true }
+
+    CourseMaterial:
+      type: object
+      properties:
+        id: { type: integer }
+        course_id: { type: integer }
+        title: { type: string }
+        size_bytes: { type: integer, description: 'Dimensione del file in byte.' }
+        created_at: { type: string, format: date-time, nullable: true }
 
     CoursePage:
       allOf:

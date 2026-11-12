@@ -4,11 +4,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { Course, Enrollment } from '../../../core/models/models';
+import { Course, CourseMaterial, Enrollment } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { FileSaverService } from '../../../core/services/features/file-saver.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { AuthService } from '../../../core/services/http/auth.service';
 import { CourseService } from '../../../core/services/http/course.service';
+import { formatFileSize } from '../../../core/utils/files';
 import { courseSchedule } from '../../../core/utils/schedule';
 import { CourseCoverComponent } from '../../../shared/course-cover/course-cover.component';
 
@@ -26,11 +28,17 @@ import { CourseCoverComponent } from '../../../shared/course-cover/course-cover.
 export class CourseDetailComponent implements OnInit {
   private api = inject(CourseService);
   private notify = inject(NotificationService); // avvisi a comparsa
+  private fileSaver = inject(FileSaverService);
   private route = inject(ActivatedRoute);
   protected auth = inject(AuthService);
 
   protected course = signal<Course | null>(null);
   protected students = signal<Enrollment[]>([]);
+  protected materials = signal<CourseMaterial[]>([]);
+  protected downloadingId = signal<number | null>(null); // il materiale in corso di scaricamento
+
+  /** Scrive la dimensione di un file a parole (per il template). */
+  protected readonly fileSize = formatFileSize;
   protected loading = signal(true);
   protected busy = signal(false);
   protected error = signal<string | null>(null);
@@ -46,6 +54,12 @@ export class CourseDetailComponent implements OnInit {
 
   /** Chi può vedere gli iscritti: gli amministratori e gli istruttori di questo corso. */
   protected canSeeStudents = computed(() => this.auth.isAdmin() || this.course()?.is_instructor === true);
+
+  /** Chi può vedere i materiali: gli amministratori, gli istruttori del corso e gli iscritti (lo decide comunque il server). */
+  protected canSeeMaterials = computed(() => {
+    const c = this.course();
+    return this.auth.isAdmin() || c?.is_instructor === true || c?.is_enrolled === true;
+  });
 
   /** Gli istruttori scritti a parole, per esempio "Istruttore: Luca Verdi" (vuoto se non ce ne sono). */
   protected instructorsText = computed(() => {
@@ -71,6 +85,7 @@ export class CourseDetailComponent implements OnInit {
         this.course.set(course);
         this.loading.set(false);
         if (this.canSeeStudents()) this.loadStudents(course.id);
+        this.loadMaterials(course.id);
       },
       error: (e: HttpErrorResponse) => {
         this.error.set(apiErrorMessage(e, 'Corso non trovato.'));
@@ -87,6 +102,43 @@ export class CourseDetailComponent implements OnInit {
   /** Annulla l'iscrizione dell'utente al corso e ricarica i dati. */
   protected cancel(): void {
     this.act(() => this.api.cancelEnrollment(this.course()!.id), 'Iscrizione annullata.');
+  }
+
+  /**
+   * Carica l'elenco dei materiali, ma solo se l'utente può vederli: dopo un annullamento l'elenco si svuota senza chiedere
+   * nulla al server. Un errore qui non blocca la pagina (i materiali sono un di più), ma si dice.
+   */
+  private loadMaterials(courseId: number): void {
+    if (!this.canSeeMaterials()) {
+      this.materials.set([]);
+      return;
+    }
+
+    this.api.materials(courseId).subscribe({
+      next: (list) => this.materials.set(list),
+      error: (e: HttpErrorResponse) => this.notify.error(apiErrorMessage(e, 'Impossibile caricare i materiali.')),
+    });
+  }
+
+  /**
+   * Scarica un materiale: il PDF si chiede all'API con il token (un link normale non lo manderebbe) e poi lo si consegna
+   * al browser. Se il permesso nel frattempo è sparito (iscrizione annullata) il server risponde 403 e lo si dice.
+   */
+  protected download(material: CourseMaterial): void {
+    this.downloadingId.set(material.id);
+
+    this.api.materialFile(material.course_id, material.id).subscribe({
+      next: (blob) => {
+        this.fileSaver.save(blob, `${material.title}.pdf`);
+        this.downloadingId.set(null);
+      },
+      error: (e: HttpErrorResponse) => {
+        this.notify.error(
+          e.status === 403 ? 'Non hai accesso ai materiali di questo corso.' : 'Impossibile scaricare il file.'
+        );
+        this.downloadingId.set(null);
+      },
+    });
   }
 
   /** Carica l'elenco degli iscritti (solo per chi ha il permesso di vederlo). */
@@ -127,6 +179,7 @@ export class CourseDetailComponent implements OnInit {
       next: (course) => {
         this.course.set(course);
         if (this.canSeeStudents()) this.loadStudents(course.id);
+        this.loadMaterials(course.id);
         this.busy.set(false);
       },
       error: (e: HttpErrorResponse) => {

@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PaginatedResponse } from '../../interfaces/paginate-response.interface';
-import { Course, CourseInput, Enrollment } from '../../models/models';
+import { Course, CourseInput, CourseMaterial, Enrollment } from '../../models/models';
 
 /** Parametri dell'elenco corsi (gli stessi dell'API: ricerca, giorno, ordinamento, paginazione). */
 export interface CourseListParams {
@@ -71,6 +71,30 @@ export class CourseService {
   /** Toglie l'immagine del corso (solo admin). Risposta 204 senza corpo. */
   removeImage(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}/image`);
+  }
+
+  /** I materiali PDF del corso (admin, istruttori del corso e iscritti; per gli altri l'API risponde 403). */
+  materials(courseId: number): Observable<CourseMaterial[]> {
+    return this.http.get<CourseMaterial[]>(`${this.base}/${courseId}/materials`);
+  }
+
+  /** Scarica il file PDF di un materiale come Blob. Si passa da HttpClient perché un link normale non manda il token. */
+  materialFile(courseId: number, materialId: number): Observable<Blob> {
+    return this.http.get(`${this.base}/${courseId}/materials/${materialId}`, { responseType: 'blob' });
+  }
+
+  /** Carica un materiale PDF (solo admin): titolo e file in un form multipart. */
+  uploadMaterial(courseId: number, title: string, file: File): Observable<CourseMaterial> {
+    const body = new FormData();
+    body.append('title', title);
+    body.append('file', file);
+
+    return this.http.post<CourseMaterial>(`${this.base}/${courseId}/materials`, body);
+  }
+
+  /** Elimina un materiale (solo admin). Risposta 204 senza corpo. */
+  deleteMaterial(courseId: number, materialId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${courseId}/materials/${materialId}`);
   }
 
   /** Assegna un utente come istruttore del corso (solo admin). Il corso restituito ha l'elenco aggiornato. */

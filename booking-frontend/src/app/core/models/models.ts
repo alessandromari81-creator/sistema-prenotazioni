@@ -88,6 +88,15 @@ export interface Course {
   is_instructor?: boolean;   // chi guarda è istruttore del corso?
 }
 
+// Un materiale PDF del corso: visibile solo a iscritti, istruttori e admin (il file si scarica dall'API, con il token)
+export interface CourseMaterial {
+  id: number;
+  course_id: number;
+  title: string;
+  size_bytes: number;
+  created_at: string | null;
+}
+
 // Dati che l'admin invia per creare o modificare un corso (start_time nel formato "HH:MM")
 export interface CourseInput {
   name: string;

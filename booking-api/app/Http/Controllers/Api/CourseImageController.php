@@ -8,6 +8,7 @@ use App\Http\Resources\CourseResource;
 use App\Models\Course;
 use App\Repositories\CourseRepository;
 use App\Services\CourseService;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -30,9 +31,12 @@ class CourseImageController extends Controller
      */
     public function show(Course $course): StreamedResponse
     {
-        abort_if(! $course->image_path || ! Storage::disk('local')->exists($course->image_path), 404);
+        /** @var FilesystemAdapter $disk il disco "local": ha response(), che il tipo generico del facade non dichiara */
+        $disk = Storage::disk('local');
 
-        return Storage::disk('local')->response($course->image_path, null, [
+        abort_if(! $course->image_path || ! $disk->exists($course->image_path), 404);
+
+        return $disk->response($course->image_path, null, [
             'Cache-Control' => 'public, max-age=86400',
         ]);
     }
