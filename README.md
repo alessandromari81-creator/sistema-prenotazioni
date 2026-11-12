@@ -49,6 +49,8 @@ sistema-prenotazioni/
 | ![I miei corsi](docs/screenshots/i-miei-corsi.png) | ![Dettaglio del corso con l'elenco degli iscritti](docs/screenshots/dettaglio-corso-istruttore.png) |
 | **Gestione corsi (admin)** | **Utenti e abbonamenti (admin)** |
 | ![Gestione dei corsi](docs/screenshots/admin-corsi.png) | ![Utenti e abbonamenti](docs/screenshots/admin-utenti-abbonamenti.png) |
+| **Materiali PDF di un corso (admin)** | **Il corso visto da un iscritto, con i materiali** |
+| ![Materiali PDF di un corso](docs/screenshots/admin-materiali.png) | ![Dettaglio del corso con i materiali](docs/screenshots/dettaglio-corso-materiali.png) |
 
 La regola "un istruttore non può essere anche studente dello stesso corso": il server la fa rispettare e l'interfaccia
 mostra il motivo.

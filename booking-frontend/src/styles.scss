@@ -146,7 +146,8 @@ main#main-content:focus, main#main-content:focus-visible { outline: none; }
   background: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
 }
-.badge--ok { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
+/* Esito positivo: verde tenue (il verde del tema, in versione ciano acceso, risultava troppo sparato); testo scuro, contrasto alto */
+.badge--ok { background: #d8f1e0; color: #0b3b1c; }
 .badge--warn { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
 
 /* Messaggi all'utente: l'esito di un'azione e gli errori (con role="status" / role="alert" nel HTML) */
