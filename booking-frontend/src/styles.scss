@@ -12,8 +12,8 @@ html {
   color-scheme: light;
   @include mat.theme((
     color: (
-      primary: mat.$violet-palette,   /* colore principale: bottoni, menu, selezioni */
-      tertiary: mat.$green-palette,   /* colore secondario: accenti, esiti positivi ("Sei iscritto") */
+      primary: mat.$azure-palette,    /* colore principale: bottoni, menu, selezioni */
+      tertiary: mat.$cyan-palette,    /* colore secondario: accenti, evidenziazioni ("Sei iscritto") */
     ),
     typography: Roboto,
     density: 0,
