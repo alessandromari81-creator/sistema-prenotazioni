@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Controllo della sessione</title>
+  </head>
+  <body>
+    <!-- Pagina caricata da keycloak-js in un iframe nascosto per sapere se l'utente ha già una sessione su Keycloak:
+         passa l'esito alla pagina principale e non mostra nulla. -->
+    <script>
+      parent.postMessage(location.href, location.origin);
+    </script>
+  </body>
+</html>

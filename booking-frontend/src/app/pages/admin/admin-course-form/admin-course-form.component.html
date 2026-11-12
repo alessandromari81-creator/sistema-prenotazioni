@@ -1,0 +1,70 @@
+<a mat-button routerLink="/admin/courses">Torna ai corsi</a>
+
+<header class="page-header">
+  <h1>{{ courseId === null ? 'Nuovo corso' : 'Modifica corso' }}</h1>
+</header>
+
+@if (error()) {
+  <p class="alert alert--error" role="alert">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p>Caricamento del corso...</p>
+} @else {
+  <form class="form-page" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>Nome del corso</mat-label>
+      <input matInput formControlName="name" required autocomplete="off" />
+      @if (form.controls.name.hasError('required')) { <mat-error>Il nome è obbligatorio</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Descrizione (facoltativa)</mat-label>
+      <textarea matInput rows="3" formControlName="description"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Posti disponibili</mat-label>
+      <input matInput type="number" formControlName="capacity" required min="1" max="200" />
+      @if (form.controls.capacity.invalid) { <mat-error>Indica un numero da 1 a 200</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Giorno della settimana</mat-label>
+      <mat-select formControlName="day_of_week" required>
+        @for (d of days; track d.value) {
+          <mat-option [value]="d.value">{{ d.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ora di inizio</mat-label>
+      <input matInput type="time" formControlName="start_time" required />
+      @if (form.controls.start_time.invalid) { <mat-error>Indica l'ora di inizio</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Durata in minuti</mat-label>
+      <input matInput type="number" formControlName="duration_minutes" required min="15" max="240" />
+      @if (form.controls.duration_minutes.invalid) { <mat-error>Indica una durata da 15 a 240 minuti</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Sala (facoltativa)</mat-label>
+      <mat-select formControlName="bookable_id">
+        <mat-option [value]="null">Nessuna sala</mat-option>
+        @for (r of rooms(); track r.id) {
+          <mat-option [value]="r.id">{{ r.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <p><mat-slide-toggle formControlName="is_active">Corso attivo (accetta iscrizioni)</mat-slide-toggle></p>
+
+    <div class="form-actions">
+      <button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'Salvataggio...' : 'Salva' }}</button>
+      <a mat-button routerLink="/admin/courses">Annulla</a>
+    </div>
+  </form>
+}

@@ -1,80 +1,81 @@
 <!-- Intestazione con i pulsanti principali -->
-    <section class="hero">
-      <h1>Sistema di prenotazioni</h1>
-      <p class="lead">
-        Un'applicazione web per prenotare risorse (sale, campi, postazioni) scegliendo
-        il giorno e un orario tra quelli realmente liberi.
-      </p>
+<section class="hero" aria-labelledby="home-title">
+  <h1 id="home-title">Palestra</h1>
+  <p class="lead">
+    Scopri i corsi della palestra, iscriviti con il tuo abbonamento e, se serve, prenota le sale
+    scegliendo un orario tra quelli realmente liberi.
+  </p>
 
-      <div class="hero-actions">
-        @if (auth.user()) {
-          <a mat-flat-button routerLink="/bookables">Vai alle risorse</a>
-          <a mat-stroked-button routerLink="/my-bookings">Le mie prenotazioni</a>
-        } @else {
-          <a mat-flat-button routerLink="/login">Accedi</a>
-          <a mat-stroked-button routerLink="/register">Registrati</a>
-        }
-      </div>
-    </section>
+  <div class="hero-actions">
+    @if (auth.user()) {
+      <a mat-flat-button routerLink="/courses">Vai ai corsi</a>
+      <a mat-stroked-button routerLink="/my-courses">I miei corsi</a>
+    } @else {
+      <button mat-flat-button type="button" (click)="auth.login('/courses')">Accedi</button>
+      <button mat-stroked-button type="button" (click)="auth.register()">Registrati</button>
+    }
+  </div>
+</section>
 
-    <h2>Cosa puoi fare</h2>
-    <div class="grid">
-      <mat-card appearance="outlined">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>event_available</mat-icon>
-          <mat-card-title>Prenotare in pochi click</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          Scegli la risorsa, seleziona la data dal calendario e prenota uno degli
-          orari disponibili. Ricevi una email di conferma.
-        </mat-card-content>
-      </mat-card>
+<h2>Cosa puoi fare</h2>
+<div class="grid">
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-icon mat-card-avatar aria-hidden="true">fitness_center</mat-icon>
+      <mat-card-title>Iscriverti ai corsi</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      Sfoglia i corsi per giorno e orario e iscriviti con il tuo abbonamento. Il numero di corsi che puoi seguire
+      dipende dal piano.
+    </mat-card-content>
+  </mat-card>
 
-      <mat-card appearance="outlined">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>event_note</mat-icon>
-          <mat-card-title>Gestire le tue prenotazioni</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          Consulta lo storico e annulla una prenotazione fino a 2 ore prima
-          dell'inizio.
-        </mat-card-content>
-      </mat-card>
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-icon mat-card-avatar aria-hidden="true">school</mat-icon>
+      <mat-card-title>Insegnare</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      Gli istruttori vedono i corsi che insegnano e chi è iscritto. Un istruttore può seguire come studente il corso
+      di un collega, ma non il proprio.
+    </mat-card-content>
+  </mat-card>
 
-      <mat-card appearance="outlined">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>admin_panel_settings</mat-icon>
-          <mat-card-title>Area amministratore</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          L'admin crea e modifica le risorse e ne definisce le fasce orarie
-          settimanali, senza sovrapposizioni.
-        </mat-card-content>
-      </mat-card>
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-icon mat-card-avatar aria-hidden="true">admin_panel_settings</mat-icon>
+      <mat-card-title>Area amministratore</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      L'amministratore gestisce corsi, istruttori, piani di abbonamento e abbonamenti, e le sale con le loro fasce
+      orarie.
+    </mat-card-content>
+  </mat-card>
 
-      <mat-card appearance="outlined">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>lock_clock</mat-icon>
-          <mat-card-title>Niente doppie prenotazioni</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          Il server controlla ogni richiesta e blocca la risorsa durante la
-          prenotazione: due persone non possono occupare lo stesso slot.
-        </mat-card-content>
-      </mat-card>
-    </div>
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-icon mat-card-avatar aria-hidden="true">event_available</mat-icon>
+      <mat-card-title>Prenotare le sale</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      Scegli la sala, la data e uno slot libero: il server blocca la risorsa durante la prenotazione, quindi due
+      persone non possono occupare lo stesso slot.
+    </mat-card-content>
+  </mat-card>
+</div>
 
-    <h2>Com'è fatto</h2>
-    <p>
-      Progetto dimostrativo realizzato per il mio portfolio: un'API REST con
-      autenticazione a cookie e un'interfaccia a pagina singola.
-    </p>
-    <div class="tags">
-      <span class="tag">Laravel</span>
-      <span class="tag">Laravel Sanctum</span>
-      <span class="tag">PostgreSQL</span>
-      <span class="tag">Docker / Sail</span>
-      <span class="tag">Angular</span>
-      <span class="tag">Angular Material</span>
-      <span class="tag">PHPUnit</span>
-    </div>
+<h2>Com'è fatto</h2>
+<p>
+  Progetto dimostrativo realizzato per il mio portfolio: un'API REST protetta da token JWT rilasciati da Keycloak
+  e un'interfaccia a pagina singola accessibile (WCAG 2.2 AA).
+</p>
+<ul class="tags" aria-label="Tecnologie usate">
+  <li class="tag">Laravel</li>
+  <li class="tag">Keycloak</li>
+  <li class="tag">JWT</li>
+  <li class="tag">PostgreSQL</li>
+  <li class="tag">Docker</li>
+  <li class="tag">Angular</li>
+  <li class="tag">Angular Material</li>
+  <li class="tag">PHPUnit</li>
+</ul>

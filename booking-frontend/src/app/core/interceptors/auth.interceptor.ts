@@ -1,26 +1,36 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, from, switchMap, throwError } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../services/http/auth.service';
 
-// Interceptor funzionale: niente più Bearer token.
+/**
+ * Aggiunge a ogni richiesta verso l'API il token di Keycloak (header "Authorization: Bearer ...").
+ * Non tocca le richieste verso altri indirizzi, così il token non viene mai inviato a terzi.
+ *
+ * Se l'API risponde 401 mentre l'utente risulta collegato, il token non è più valido: si torna al login.
+ */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  if (!req.url.startsWith(environment.apiUrl)) {
+    return next(req);
+  }
+
   const auth = inject(AuthService);
 
-  // Accept: application/json fa rispondere Laravel con errori JSON (401, 422...)
-  // invece di redirect HTML. X-Requested-With segnala una richiesta AJAX.
-  const cloned = req.clone({
-    setHeaders: {
-      Accept: 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
-    },
-  });
-
-  return next(cloned).pipe(
+  return from(auth.getToken()).pipe(
+    switchMap((token) =>
+      next(
+        req.clone({
+          // Accept: application/json fa rispondere Laravel con errori JSON (401, 422...) invece di redirect HTML
+          setHeaders: token
+            ? { Accept: 'application/json', Authorization: `Bearer ${token}` }
+            : { Accept: 'application/json' },
+        })
+      )
+    ),
     catchError((err: HttpErrorResponse) => {
-      // 401 mentre ero loggato = sessione scaduta: pulisco lo stato e vado al login
       if (err.status === 401 && auth.isLoggedIn()) {
-        auth.clear();
+        void auth.login(window.location.pathname);
       }
       return throwError(() => err);
     })

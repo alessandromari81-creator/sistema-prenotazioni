@@ -66,3 +66,108 @@ body {
 /* Tabelle Material: scroll orizzontale su schermi stretti */
 .table-wrap { overflow-x: auto; }
 table.mat-mdc-table { width: 100%; }
+
+/* ==========================================================
+   ACCESSIBILITÀ E COMPONENTI COMUNI (WCAG 2.2 AA)
+   ========================================================== */
+
+/* Il focus da tastiera è sempre visibile, in tutta l'app (non solo nel layout) */
+:focus-visible {
+  outline: 3px solid var(--mat-sys-primary);
+  outline-offset: 3px;
+}
+
+/* La pagina principale riceve il focus a ogni cambio di rotta (per chi usa tastiera o lettore di schermo):
+   è un focus "programmatico", non serve un contorno */
+/* (selettore più specifico di quello del layout, altrimenti il contorno blu comparirebbe dopo ogni cambio di pagina) */
+main#main-content:focus, main#main-content:focus-visible { outline: none; }
+
+/* Testo solo per i lettori di schermo: nascosto alla vista ma letto ad alta voce */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Chi chiede meno movimento non vede animazioni */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Etichette di stato: sempre testo (mai solo colore), con colori del tema che garantiscono il contrasto */
+.badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  list-style: none;
+  padding: 0;
+  margin: .75rem 0 0;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .2rem .65rem;
+  border-radius: 999px;
+  font-size: .875rem;
+  font-weight: 500;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+.badge--ok { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
+.badge--warn { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
+
+/* Messaggi all'utente: l'esito di un'azione e gli errori (con role="status" / role="alert" nel HTML) */
+.alert {
+  padding: .75rem 1rem;
+  border-radius: 8px;
+  margin: 0 0 1rem;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+.alert--error { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
+
+/* Barra dei filtri sopra a elenchi e tabelle */
+.table-filters, .filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+.table-filters mat-form-field, .filters mat-form-field { min-width: 200px; flex: 1 1 200px; max-width: 320px; }
+
+/* Pulsanti di azione in fondo a una riga di tabella */
+.row-actions { white-space: nowrap; text-align: end; }
+
+/* Pagine con un form: larghezza leggibile, campi a tutta larghezza */
+.form-page { max-width: 600px; }
+.form-page mat-form-field { width: 100%; }
+
+/* Riga di testo con un'icona decorativa davanti */
+.with-icon { display: flex; align-items: center; gap: .5rem; margin: .25rem 0; }
+
+/* Riquadro con un riepilogo (per esempio l'abbonamento) */
+.summary-box {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background: var(--mat-sys-surface);
+  margin-bottom: 1.5rem;
+}
+.summary-box h2 { margin-top: 0; }
+
+/* Elenco semplice, senza puntini né rientro (le voci hanno già un'icona o un pulsante) */
+.plain-list { list-style: none; padding: 0; margin: 0 0 1rem; }
+.plain-list li { padding: .5rem 0; border-bottom: 1px solid var(--mat-sys-outline-variant); flex-wrap: wrap; }

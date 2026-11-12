@@ -1,0 +1,78 @@
+<a mat-button routerLink="/courses">
+  <mat-icon aria-hidden="true">arrow_back</mat-icon>
+  Tutti i corsi
+</a>
+
+@if (notice()) {
+  <p class="alert" role="status">{{ notice() }}</p>
+}
+@if (error()) {
+  <p class="alert alert--error" role="alert">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p>Caricamento del corso...</p>
+} @else if (course(); as c) {
+  <header class="page-header">
+    <h1>{{ c.name }}</h1>
+  </header>
+
+  <p class="with-icon"><mat-icon aria-hidden="true">schedule</mat-icon><span>{{ schedule() }}</span></p>
+  @if (c.bookable) {
+    <p class="with-icon"><mat-icon aria-hidden="true">meeting_room</mat-icon><span>{{ c.bookable.name }}</span></p>
+  }
+  @if (instructorsText()) {
+    <p class="with-icon"><mat-icon aria-hidden="true">person</mat-icon><span>{{ instructorsText() }}</span></p>
+  }
+  @if (c.description) {
+    <p>{{ c.description }}</p>
+  }
+
+  <ul class="badge-list" aria-label="Stato del corso">
+    @if (c.is_instructor) { <li class="badge">Sei istruttore di questo corso</li> }
+    @if (c.is_enrolled) { <li class="badge badge--ok">Sei iscritto</li> }
+    @if (!c.is_active) { <li class="badge badge--warn">Disattivato</li> }
+    @if (spotsText()) { <li class="badge" [class.badge--warn]="c.spots_left === 0">{{ spotsText() }}</li> }
+    <li class="badge">{{ c.enrolled_count ?? 0 }} iscritti su {{ c.capacity }} posti</li>
+  </ul>
+
+  <div class="form-actions">
+    @if (c.is_instructor || !c.is_active) {
+      <!-- Niente pulsanti: lo stato qui sopra spiega perché -->
+    } @else if (c.is_enrolled) {
+      <button mat-stroked-button type="button" [disabled]="busy()" (click)="cancel()">Annulla iscrizione</button>
+    } @else if (c.spots_left !== 0) {
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="enroll()">Iscriviti al corso</button>
+    }
+
+    @if (auth.isAdmin()) {
+      <a mat-stroked-button [routerLink]="['/admin/courses', c.id, 'edit']">Modifica</a>
+      <a mat-stroked-button [routerLink]="['/admin/courses', c.id, 'instructors']">Gestisci gli istruttori</a>
+    }
+  </div>
+
+  @if (canSeeStudents()) {
+    <section aria-labelledby="students-title">
+      <h2 id="students-title">Iscritti</h2>
+
+      @if (students().length) {
+        <div class="table-wrap">
+          <table mat-table [dataSource]="students()" aria-labelledby="students-title">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef scope="col">Nome</th>
+              <td mat-cell *matCellDef="let s">{{ s.student?.name }}</td>
+            </ng-container>
+            <ng-container matColumnDef="email">
+              <th mat-header-cell *matHeaderCellDef scope="col">Email</th>
+              <td mat-cell *matCellDef="let s">{{ s.student?.email }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          </table>
+        </div>
+      } @else {
+        <p class="empty">Nessun iscritto al momento.</p>
+      }
+    </section>
+  }
+}

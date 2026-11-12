@@ -1,0 +1,45 @@
+<a mat-button routerLink="/admin/plans">Torna ai piani</a>
+
+<header class="page-header">
+  <h1>{{ planId === null ? 'Nuovo piano' : 'Modifica piano' }}</h1>
+</header>
+
+@if (error()) {
+  <p class="alert alert--error" role="alert">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p>Caricamento del piano...</p>
+} @else {
+  <form class="form-page" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>Nome del piano</mat-label>
+      <input matInput formControlName="name" required autocomplete="off" />
+      @if (form.controls.name.hasError('required')) { <mat-error>Il nome è obbligatorio</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Descrizione (facoltativa)</mat-label>
+      <textarea matInput rows="3" formControlName="description"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Durata in giorni</mat-label>
+      <input matInput type="number" formControlName="duration_days" required min="1" max="1095" />
+      @if (form.controls.duration_days.invalid) { <mat-error>Indica un numero da 1 a 1095</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Corsi seguibili contemporaneamente</mat-label>
+      <input matInput type="number" formControlName="max_courses" required min="1" max="50" />
+      @if (form.controls.max_courses.invalid) { <mat-error>Indica un numero da 1 a 50</mat-error> }
+    </mat-form-field>
+
+    <p><mat-slide-toggle formControlName="is_active">Piano attivo (assegnabile agli utenti)</mat-slide-toggle></p>
+
+    <div class="form-actions">
+      <button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'Salvataggio...' : 'Salva' }}</button>
+      <a mat-button routerLink="/admin/plans">Annulla</a>
+    </div>
+  </form>
+}

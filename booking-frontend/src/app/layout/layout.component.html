@@ -32,22 +32,35 @@
       </a>
 
       @if (auth.user()) {
-        <a
-          mat-list-item
-          routerLink="/bookables"
-          routerLinkActive="active-item"
-          (click)="drawer.close()"
-        >
+        <h3 matSubheader>Corsi</h3>
+
+        <a mat-list-item routerLink="/courses" routerLinkActive="active-item" [routerLinkActiveOptions]="{ exact: true }" (click)="drawer.close()">
+          <mat-icon matListItemIcon aria-hidden="true">fitness_center</mat-icon>
+          <span matListItemTitle>Corsi</span>
+        </a>
+
+        <a mat-list-item routerLink="/my-courses" routerLinkActive="active-item" (click)="drawer.close()">
+          <mat-icon matListItemIcon aria-hidden="true">checklist</mat-icon>
+          <span matListItemTitle>I miei corsi</span>
+        </a>
+
+        @if (auth.teachesCourses()) {
+          <a mat-list-item routerLink="/teaching" routerLinkActive="active-item" (click)="drawer.close()">
+            <mat-icon matListItemIcon aria-hidden="true">school</mat-icon>
+            <span matListItemTitle>Corsi che insegno</span>
+          </a>
+        }
+
+        <mat-divider />
+
+        <h3 matSubheader>Sale</h3>
+
+        <a mat-list-item routerLink="/bookables" routerLinkActive="active-item" (click)="drawer.close()">
           <mat-icon matListItemIcon aria-hidden="true">meeting_room</mat-icon>
           <span matListItemTitle>Risorse</span>
         </a>
 
-        <a
-          mat-list-item
-          routerLink="/my-bookings"
-          routerLinkActive="active-item"
-          (click)="drawer.close()"
-        >
+        <a mat-list-item routerLink="/my-bookings" routerLinkActive="active-item" (click)="drawer.close()">
           <mat-icon matListItemIcon aria-hidden="true">event_note</mat-icon>
           <span matListItemTitle>Le mie prenotazioni</span>
         </a>
@@ -57,15 +70,23 @@
 
           <h3 matSubheader>Amministrazione</h3>
 
-          <a
-            mat-list-item
-            routerLink="/admin/bookables"
-            routerLinkActive="active-item"
-            (click)="drawer.close()"
-          >
-            <mat-icon matListItemIcon aria-hidden="true">
-              admin_panel_settings
-            </mat-icon>
+          <a mat-list-item routerLink="/admin/courses" routerLinkActive="active-item" (click)="drawer.close()">
+            <mat-icon matListItemIcon aria-hidden="true">admin_panel_settings</mat-icon>
+            <span matListItemTitle>Gestione corsi</span>
+          </a>
+
+          <a mat-list-item routerLink="/admin/plans" routerLinkActive="active-item" (click)="drawer.close()">
+            <mat-icon matListItemIcon aria-hidden="true">card_membership</mat-icon>
+            <span matListItemTitle>Piani di abbonamento</span>
+          </a>
+
+          <a mat-list-item routerLink="/admin/subscriptions" routerLinkActive="active-item" (click)="drawer.close()">
+            <mat-icon matListItemIcon aria-hidden="true">badge</mat-icon>
+            <span matListItemTitle>Abbonamenti</span>
+          </a>
+
+          <a mat-list-item routerLink="/admin/bookables" routerLinkActive="active-item" (click)="drawer.close()">
+            <mat-icon matListItemIcon aria-hidden="true">tune</mat-icon>
             <span matListItemTitle>Gestione risorse</span>
           </a>
         }
@@ -80,15 +101,15 @@
       } @else {
         <mat-divider />
 
-        <a mat-list-item routerLink="/login" (click)="drawer.close()">
+        <button mat-list-item type="button" (click)="login()">
           <mat-icon matListItemIcon aria-hidden="true">login</mat-icon>
           <span matListItemTitle>Accedi</span>
-        </a>
+        </button>
 
-        <a mat-list-item routerLink="/register" (click)="drawer.close()">
+        <button mat-list-item type="button" (click)="register()">
           <mat-icon matListItemIcon aria-hidden="true">person_add</mat-icon>
           <span matListItemTitle>Registrati</span>
-        </a>
+        </button>
       }
 
     </mat-nav-list>
@@ -124,9 +145,9 @@
             <mat-icon aria-hidden="true">logout</mat-icon>
           </button>
         } @else {
-          <a mat-flat-button routerLink="/login">
+          <button mat-flat-button type="button" (click)="login()">
             Accedi
-          </a>
+          </button>
         }
       </div>
 

@@ -1,0 +1,83 @@
+<header class="page-header">
+  <h1>Abbonamenti</h1>
+  <p class="muted">Cerca una persona per vedere i suoi abbonamenti o assegnargliene uno.</p>
+</header>
+
+@if (notice()) {
+  <p class="alert" role="status">{{ notice() }}</p>
+}
+@if (error()) {
+  <p class="alert alert--error" role="alert">{{ error() }}</p>
+}
+
+<section aria-labelledby="users-title">
+  <h2 id="users-title">Utenti</h2>
+
+  <form class="filters" role="search" aria-label="Cerca un utente" (submit)="$event.preventDefault(); searchUsers()">
+    <mat-form-field appearance="outline">
+      <mat-label>Nome o email</mat-label>
+      <input matInput type="search" name="q" autocomplete="off" [ngModel]="query()" (ngModelChange)="query.set($event)" />
+    </mat-form-field>
+    <button mat-flat-button type="submit">Cerca</button>
+  </form>
+
+  @if (users().length) {
+    <ul class="plain-list">
+      @for (u of users(); track u.id) {
+        <li class="with-icon">
+          <span>{{ u.name }} <span class="muted">({{ u.email }})</span></span>
+          <button mat-stroked-button type="button" (click)="select(u)" [attr.aria-label]="'Gestisci gli abbonamenti di ' + u.name" [attr.aria-pressed]="selected()?.id === u.id">
+            Abbonamenti
+          </button>
+        </li>
+      }
+    </ul>
+  } @else if (searched()) {
+    <p class="empty" role="status">Nessun utente trovato.</p>
+  }
+</section>
+
+@if (selected(); as user) {
+  <section class="summary-box" aria-labelledby="selected-title">
+    <h2 id="selected-title">Abbonamenti di {{ user.name }}</h2>
+
+    @if (subscriptions().length) {
+      <ul class="plain-list">
+        @for (s of subscriptions(); track s.id) {
+          <li class="with-icon">
+            <span>
+              <strong>{{ s.plan?.name }}</strong>:
+              dal {{ s.starts_on | date: 'dd/MM/yyyy' }} al {{ s.ends_on | date: 'dd/MM/yyyy' }}
+            </span>
+            <span class="badge" [class.badge--ok]="s.is_active" [class.badge--warn]="!!s.cancelled_at">{{ statusText(s) }}</span>
+            @if (!s.cancelled_at) {
+              <button mat-button type="button" (click)="cancel(s)" [attr.aria-label]="'Annulla l\'abbonamento ' + s.plan?.name + ' di ' + user.name">Annulla</button>
+            }
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">Questa persona non ha abbonamenti.</p>
+    }
+
+    <h3>Assegna un piano</h3>
+    <form class="filters" aria-label="Assegna un abbonamento" (submit)="$event.preventDefault(); assign()">
+      <mat-form-field appearance="outline">
+        <mat-label>Piano</mat-label>
+        <mat-select name="plan" required [value]="planId()" (selectionChange)="planId.set($event.value)">
+          @for (p of plans(); track p.id) {
+            <mat-option [value]="p.id">{{ p.name }} ({{ p.duration_days }} giorni, {{ p.max_courses }} corsi)</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Inizio (facoltativo)</mat-label>
+        <input matInput type="date" name="startsOn" [min]="today" [ngModel]="startsOn()" (ngModelChange)="startsOn.set($event)" />
+        <mat-hint>Se vuoto parte da oggi</mat-hint>
+      </mat-form-field>
+
+      <button mat-flat-button type="submit" [disabled]="!planId()">Assegna abbonamento</button>
+    </form>
+  </section>
+}

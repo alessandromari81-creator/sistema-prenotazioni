@@ -1,0 +1,71 @@
+<header class="page-header">
+  <h1>Corsi</h1>
+  <p class="muted">Scegli un corso e iscriviti. Per iscriverti serve un abbonamento attivo.</p>
+</header>
+
+<form class="filters" role="search" aria-label="Cerca tra i corsi" (submit)="$event.preventDefault(); applyFilters()">
+  <mat-form-field appearance="outline">
+    <mat-label>Cerca per nome</mat-label>
+    <input matInput type="search" name="search" autocomplete="off" [value]="search()" (input)="search.set($any($event.target).value)" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Giorno</mat-label>
+    <mat-select [value]="day()" (selectionChange)="day.set($event.value); applyFilters()">
+      <mat-option [value]="null">Tutti i giorni</mat-option>
+      @for (d of days; track d.value) {
+        <mat-option [value]="d.value">{{ d.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <button mat-flat-button type="submit">Cerca</button>
+</form>
+
+<!-- Zone "live": i lettori di schermo annunciano da sole queste frasi quando cambiano -->
+<p class="sr-only" role="status">{{ resultsText() }}</p>
+
+@if (notice()) {
+  <p class="alert" role="status">{{ notice() }}</p>
+}
+@if (error()) {
+  <p class="alert alert--error" role="alert">{{ error() }}</p>
+}
+
+<section aria-label="Elenco dei corsi">
+  @if (loading()) {
+    <p>Caricamento dei corsi...</p>
+  } @else if (courses().length) {
+    <div class="grid">
+      @for (c of courses(); track c.id) {
+        <app-course-card [course]="c">
+          <span actions>
+            @if (c.is_instructor || !c.is_active) {
+              <!-- Nessun pulsante: lo stato della scheda spiega perché -->
+            } @else if (c.is_enrolled) {
+              <button mat-stroked-button type="button" [disabled]="busyId() === c.id" [attr.aria-label]="'Annulla iscrizione a ' + c.name" (click)="cancel(c)">
+                Annulla iscrizione
+              </button>
+            } @else if (c.spots_left !== 0) {
+              <button mat-flat-button type="button" [disabled]="busyId() === c.id" [attr.aria-label]="'Iscriviti a ' + c.name" (click)="enroll(c)">
+                Iscriviti
+              </button>
+            }
+          </span>
+        </app-course-card>
+      }
+    </div>
+
+    <mat-paginator
+      [length]="total()"
+      [pageIndex]="page()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="[3, 6, 12]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons
+      aria-label="Paginazione dei corsi"
+    />
+  } @else if (!error()) {
+    <p class="empty">Nessun corso trovato.</p>
+  }
+</section>

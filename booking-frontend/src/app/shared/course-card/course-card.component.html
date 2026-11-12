@@ -1,0 +1,52 @@
+<mat-card appearance="outlined" [attr.aria-labelledby]="titleId()">
+  <mat-card-content>
+    <h2 class="card-title" [id]="titleId()">{{ course().name }}</h2>
+
+    <p class="with-icon">
+      <mat-icon aria-hidden="true">schedule</mat-icon>
+      <span>{{ schedule() }}</span>
+    </p>
+
+    @if (course().bookable) {
+      <p class="with-icon">
+        <mat-icon aria-hidden="true">meeting_room</mat-icon>
+        <span>{{ course().bookable?.name }}</span>
+      </p>
+    }
+
+    @if (instructorNames()) {
+      <p class="with-icon">
+        <mat-icon aria-hidden="true">person</mat-icon>
+        <span>Istruttore: {{ instructorNames() }}</span>
+      </p>
+    }
+
+    @if (course().description) {
+      <p class="muted">{{ course().description }}</p>
+    }
+
+    <ul class="badge-list" aria-label="Stato del corso">
+      @if (course().is_instructor) {
+        <li class="badge">Sei istruttore di questo corso</li>
+      }
+      @if (course().is_enrolled) {
+        <li class="badge badge--ok">Sei iscritto</li>
+      }
+      @if (!course().is_active) {
+        <li class="badge badge--warn">Disattivato</li>
+      }
+      @if (spotsText()) {
+        <li class="badge" [class.badge--warn]="course().spots_left === 0">{{ spotsText() }}</li>
+      }
+    </ul>
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    @if (showDetailLink()) {
+      <a mat-button [routerLink]="['/courses', course().id]" [attr.aria-label]="'Dettagli del corso ' + course().name">
+        Dettagli
+      </a>
+    }
+    <ng-content select="[actions]" />
+  </mat-card-actions>
+</mat-card>

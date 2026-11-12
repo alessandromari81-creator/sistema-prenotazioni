@@ -1,0 +1,22 @@
+<header class="page-header">
+  <h1>Corsi che insegno</h1>
+  <p class="muted">Apri un corso per vedere chi è iscritto.</p>
+</header>
+
+@if (error()) {
+  <p class="alert alert--error" role="alert">{{ error() }}</p>
+}
+
+<section aria-label="Elenco dei corsi che insegni">
+  @if (loading()) {
+    <p>Caricamento dei corsi...</p>
+  } @else if (courses().length) {
+    <div class="grid">
+      @for (c of courses(); track c.id) {
+        <app-course-card [course]="c" />
+      }
+    </div>
+  } @else if (!error()) {
+    <p class="empty">Non insegni in nessun corso.</p>
+  }
+</section>

@@ -1,0 +1,52 @@
+<header class="page-header">
+  <h1>I miei corsi</h1>
+</header>
+
+@if (notice()) {
+  <p class="alert" role="status">{{ notice() }}</p>
+}
+@if (error()) {
+  <p class="alert alert--error" role="alert">{{ error() }}</p>
+}
+
+<section class="summary-box" aria-labelledby="subscription-title">
+  <h2 id="subscription-title">Il tuo abbonamento</h2>
+
+  @if (usage(); as u) {
+    @if (u.subscription; as s) {
+      <p>
+        <strong>{{ s.plan?.name }}</strong>: valido dal {{ s.starts_on | date: 'dd/MM/yyyy' }} al {{ s.ends_on | date: 'dd/MM/yyyy' }}.
+      </p>
+      <p>
+        Stai seguendo {{ u.courses_used }} {{ u.courses_used === 1 ? 'corso' : 'corsi' }} su {{ s.plan?.max_courses }}:
+        ne puoi ancora seguire {{ u.courses_left }}.
+      </p>
+    } @else {
+      <p>Non hai un abbonamento attivo. Per iscriverti ai corsi rivolgiti alla palestra: un amministratore te ne assegna uno.</p>
+    }
+  } @else {
+    <p>Caricamento dell'abbonamento...</p>
+  }
+</section>
+
+<section aria-labelledby="enrolled-title">
+  <h2 id="enrolled-title">Corsi a cui sei iscritto</h2>
+
+  @if (loading()) {
+    <p>Caricamento dei corsi...</p>
+  } @else if (courses().length) {
+    <div class="grid">
+      @for (c of courses(); track c.id) {
+        <app-course-card [course]="c">
+          <span actions>
+            <button mat-stroked-button type="button" [disabled]="busyId() === c.id" [attr.aria-label]="'Annulla iscrizione a ' + c.name" (click)="cancel(c)">
+              Annulla iscrizione
+            </button>
+          </span>
+        </app-course-card>
+      }
+    </div>
+  } @else if (!error()) {
+    <p class="empty">Non sei iscritto a nessun corso. <a routerLink="/courses">Scopri i corsi</a>.</p>
+  }
+</section>

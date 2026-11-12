@@ -23,9 +23,9 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    // La gestione del cookie XSRF è inclusa di default in HttpClient
+    // L'interceptor aggiunge a ogni richiesta all'API il token di Keycloak
     provideHttpClient(withInterceptors([authInterceptor])),
-    // Prima di mostrare qualsiasi pagina, chiede al server se la sessione è valida
+    // Prima di mostrare qualsiasi pagina, controlla se l'utente ha una sessione su Keycloak e carica il suo profilo
     provideAppInitializer(() => inject(AuthService).init()),
     { provide: LOCALE_ID, useValue: 'it-IT' },         // lingua per le pipe (date, number)
     { provide: MAT_DATE_LOCALE, useValue: 'it-IT' },   // lingua del calendario Material
