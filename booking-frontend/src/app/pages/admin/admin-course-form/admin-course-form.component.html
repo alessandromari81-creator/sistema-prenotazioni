@@ -98,6 +98,16 @@
       }
     </fieldset>
 
+    @if (courseId !== null) {
+      <!-- I materiali si caricano dopo aver creato il corso: la pagina dedicata sta a /admin/courses/:id/materials -->
+      <p>
+        <a mat-stroked-button [routerLink]="['/admin/courses', courseId, 'materials']">
+          <mat-icon aria-hidden="true">attach_file</mat-icon>
+          Gestisci i materiali PDF
+        </a>
+      </p>
+    }
+
     <p><mat-slide-toggle formControlName="is_active">Corso attivo (accetta iscrizioni)</mat-slide-toggle></p>
 
     <div class="form-actions">

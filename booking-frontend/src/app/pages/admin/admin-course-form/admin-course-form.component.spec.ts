@@ -270,6 +270,16 @@ describe('AdminCourseFormComponent', () => {
     await expectNoA11yViolations(el);
   });
 
+  it('in modifica offre il collegamento ai materiali PDF del corso; in creazione no', async () => {
+    const edit = await render('3');
+    const link = Array.from(edit.el.querySelectorAll('a')).find((a) => a.textContent!.includes('Gestisci i materiali PDF'));
+    expect(link!.getAttribute('href')).toBe('/admin/courses/3/materials');
+    TestBed.resetTestingModule();
+
+    const create = await render();
+    expect(create.el.textContent).not.toContain('Gestisci i materiali PDF');
+  });
+
   it('è accessibile (WCAG 2.2 AA, senza il contrasto)', async () => {
     const { el } = await render();
 

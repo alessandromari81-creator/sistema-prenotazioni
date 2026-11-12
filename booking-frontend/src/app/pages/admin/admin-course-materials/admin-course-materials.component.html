@@ -25,6 +25,14 @@
           <li class="with-icon">
             <mat-icon aria-hidden="true">picture_as_pdf</mat-icon>
             <span>{{ m.title }} <span class="muted">(PDF, {{ fileSize(m.size_bytes) }})</span></span>
+            <button mat-stroked-button type="button" [disabled]="busyId() === m.id" (click)="view(m)" [attr.aria-label]="'Visualizza ' + m.title">
+              <mat-icon aria-hidden="true">visibility</mat-icon>
+              Visualizza
+            </button>
+            <button mat-stroked-button type="button" [disabled]="busyId() === m.id" (click)="download(m)" [attr.aria-label]="'Scarica ' + m.title">
+              <mat-icon aria-hidden="true">download</mat-icon>
+              Scarica
+            </button>
             <button mat-button type="button" (click)="remove(m)" [attr.aria-label]="'Elimina ' + m.title">Elimina</button>
           </li>
         }

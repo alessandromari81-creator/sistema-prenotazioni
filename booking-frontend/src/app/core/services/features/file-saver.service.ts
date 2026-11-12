@@ -8,6 +8,25 @@ import { Injectable } from '@angular/core';
  */
 @Injectable({ providedIn: 'root' })
 export class FileSaverService {
+  /**
+   * Mostra un PDF nel visualizzatore del browser, in una scheda nuova. La scheda va aperta SUBITO al clic (con
+   * window.open nel gestore del clic) e passata qui quando il file è arrivato: aprirla dopo l'attesa della rete farebbe
+   * credere al browser che sia un popup indesiderato e la bloccherebbe. Se la scheda è stata bloccata ($tab null) il file
+   * si scarica con il nome indicato.
+   */
+  show(blob: Blob, tab: Window | null, filename: string): void {
+    if (!tab) {
+      this.save(blob, filename);
+      return;
+    }
+
+    const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+    tab.location.href = url;
+
+    // L'indirizzo serve alla scheda finché è aperta: lo si libera dopo un po', non subito
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
   /** Fa scaricare $blob al browser con il nome $filename. */
   save(blob: Blob, filename: string): void {
     const url = URL.createObjectURL(blob);

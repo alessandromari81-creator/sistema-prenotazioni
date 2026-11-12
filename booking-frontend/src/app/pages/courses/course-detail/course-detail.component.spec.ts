@@ -28,12 +28,13 @@ const students: Enrollment[] = [
 describe('CourseDetailComponent', () => {
   // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
   const notify = { success: vi.fn(), error: vi.fn() };
-  const fileSaver = { save: vi.fn() }; // il salvataggio vero passa dal browser: nei test si controlla solo come viene chiamato
+  const fileSaver = { save: vi.fn(), show: vi.fn() }; // il salvataggio vero passa dal browser: nei test si controlla solo come viene chiamato
   let materialList = [material];
   beforeEach(() => {
     notify.success.mockReset();
     notify.error.mockReset();
     fileSaver.save.mockClear();
+    fileSaver.show.mockClear();
     materialList = [material];
   });
 
@@ -224,6 +225,24 @@ describe('CourseDetailComponent', () => {
     expect(api.materialFile).toHaveBeenCalledWith(7, 5);
     expect(fileSaver.save).toHaveBeenCalledWith(expect.any(Blob), 'Scheda di allenamento.pdf');
     expect(el.querySelector('a[href*="materials"]')).toBeNull(); // nessun indirizzo diretto al file nella pagina
+  });
+
+  it('"Visualizza" apre una scheda subito e la riempie con il PDF; se il server rifiuta la chiude e avvisa', async () => {
+    const tab = { close: vi.fn() } as unknown as Window;
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab);
+    const el = await render(course({ is_enrolled: true }));
+
+    el.querySelector<HTMLButtonElement>('button[aria-label="Visualizza Scheda di allenamento"]')!.click();
+    fixture.detectChanges();
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(fileSaver.show).toHaveBeenCalledWith(expect.any(Blob), tab, 'Scheda di allenamento.pdf');
+
+    api.materialFile.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    el.querySelector<HTMLButtonElement>('button[aria-label="Visualizza Scheda di allenamento"]')!.click();
+    fixture.detectChanges();
+    expect(tab.close).toHaveBeenCalled();
+    expect(notify.error).toHaveBeenCalledWith('Non hai accesso ai materiali di questo corso.');
+    open.mockRestore();
   });
 
   it('se il permesso è sparito (403) lo dice e non scarica nulla', async () => {

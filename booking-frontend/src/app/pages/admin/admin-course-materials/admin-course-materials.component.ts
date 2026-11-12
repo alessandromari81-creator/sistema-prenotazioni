@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Course, CourseMaterial } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { FileSaverService } from '../../../core/services/features/file-saver.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { formatFileSize } from '../../../core/utils/files';
@@ -28,12 +29,14 @@ const PDF_MAX_BYTES = 10 * 1024 * 1024;
 export class AdminCourseMaterialsComponent implements OnInit {
   private api = inject(CourseService);
   private notify = inject(NotificationService); // avvisi a comparsa
+  private fileSaver = inject(FileSaverService);
   private route = inject(ActivatedRoute);
 
   protected course = signal<Course | null>(null);
   protected materials = signal<CourseMaterial[]>([]);
   protected loading = signal(true);
   protected saving = signal(false);
+  protected busyId = signal<number | null>(null); // il materiale che si sta aprendo o scaricando
   protected error = signal<string | null>(null);
 
   protected title = signal('');
@@ -124,6 +127,37 @@ export class AdminCourseMaterialsComponent implements OnInit {
       error: (e: HttpErrorResponse) => {
         this.notify.error(apiErrorMessage(e, 'Caricamento non riuscito.'));
         this.saving.set(false);
+      },
+    });
+  }
+
+  /**
+   * Apre il PDF nel visualizzatore del browser, in una scheda nuova (aperta subito al clic, altrimenti il browser la
+   * bloccherebbe). Il file si chiede all'API con il token, perché non ha un indirizzo pubblico.
+   */
+  protected view(material: CourseMaterial): void {
+    const tab = window.open('', '_blank');
+    this.fetchFile(material, (blob) => this.fileSaver.show(blob, tab, `${material.title}.pdf`), () => tab?.close());
+  }
+
+  /** Scarica il PDF come file. */
+  protected download(material: CourseMaterial): void {
+    this.fetchFile(material, (blob) => this.fileSaver.save(blob, `${material.title}.pdf`));
+  }
+
+  /** Chiede il file all'API; poi lo passa a $onFile. In caso di errore avvisa e chiama $onError (per esempio per chiudere la scheda). */
+  private fetchFile(material: CourseMaterial, onFile: (blob: Blob) => void, onError: () => void = () => {}): void {
+    this.busyId.set(material.id);
+
+    this.api.materialFile(material.course_id, material.id).subscribe({
+      next: (blob) => {
+        onFile(blob);
+        this.busyId.set(null);
+      },
+      error: () => {
+        onError();
+        this.notify.error('Impossibile aprire il file.');
+        this.busyId.set(null);
       },
     });
   }

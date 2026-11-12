@@ -141,6 +141,30 @@ export class CourseDetailComponent implements OnInit {
     });
   }
 
+  /**
+   * Apre un materiale nel visualizzatore PDF del browser, in una scheda nuova. La scheda si apre subito al clic (altrimenti
+   * il browser la bloccherebbe) e si riempie quando il file, chiesto con il token, è arrivato. Se il server rifiuta
+   * (permesso sparito) la scheda si chiude e si avvisa.
+   */
+  protected view(material: CourseMaterial): void {
+    const tab = window.open('', '_blank');
+    this.downloadingId.set(material.id);
+
+    this.api.materialFile(material.course_id, material.id).subscribe({
+      next: (blob) => {
+        this.fileSaver.show(blob, tab, `${material.title}.pdf`);
+        this.downloadingId.set(null);
+      },
+      error: (e: HttpErrorResponse) => {
+        tab?.close();
+        this.notify.error(
+          e.status === 403 ? 'Non hai accesso ai materiali di questo corso.' : 'Impossibile aprire il file.'
+        );
+        this.downloadingId.set(null);
+      },
+    });
+  }
+
   /** Carica l'elenco degli iscritti (solo per chi ha il permesso di vederlo). */
   private loadStudents(courseId: number): void {
     this.api.students(courseId).subscribe({

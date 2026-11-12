@@ -4,6 +4,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { expectNoA11yViolations } from '../../../../testing/a11y';
+import { FileSaverService } from '../../../core/services/features/file-saver.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { AdminCourseMaterialsComponent } from './admin-course-materials.component';
@@ -13,11 +14,14 @@ const material = { id: 5, course_id: 7, title: 'Scheda di allenamento', size_byt
 
 describe('AdminCourseMaterialsComponent', () => {
   const notify = { success: vi.fn(), error: vi.fn() };
-  let api: Record<'get' | 'materials' | 'uploadMaterial' | 'deleteMaterial', ReturnType<typeof vi.fn>>;
+  let api: Record<'get' | 'materials' | 'uploadMaterial' | 'deleteMaterial' | 'materialFile', ReturnType<typeof vi.fn>>;
+  const fileSaver = { show: vi.fn(), save: vi.fn() };
 
   beforeEach(() => {
     notify.success.mockReset();
     notify.error.mockReset();
+    fileSaver.show.mockReset();
+    fileSaver.save.mockReset();
   });
 
   async function render(list = [material]) {
@@ -26,6 +30,7 @@ describe('AdminCourseMaterialsComponent', () => {
       materials: vi.fn().mockReturnValue(of(list)),
       uploadMaterial: vi.fn().mockReturnValue(of({ ...material, id: 6, title: 'Dispensa' })),
       deleteMaterial: vi.fn().mockReturnValue(of(undefined)),
+      materialFile: vi.fn().mockReturnValue(of(new Blob(['%PDF']))),
     };
 
     await TestBed.configureTestingModule({
@@ -33,6 +38,7 @@ describe('AdminCourseMaterialsComponent', () => {
       providers: [
         provideRouter([]),
         { provide: NotificationService, useValue: notify },
+        { provide: FileSaverService, useValue: fileSaver },
         { provide: CourseService, useValue: api },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '7' }) } } },
       ],
@@ -160,6 +166,45 @@ describe('AdminCourseMaterialsComponent', () => {
     button(el, 'Elimina').click();
 
     expect(api.deleteMaterial).not.toHaveBeenCalled();
+  });
+
+  it('"Visualizza" apre subito una scheda e la riempie con il PDF chiesto all\'API con il token', async () => {
+    const tab = { close: vi.fn() } as unknown as Window;
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab);
+    const { el, fixture } = await render();
+
+    button(el, 'Visualizza').click();
+    fixture.detectChanges();
+
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(api.materialFile).toHaveBeenCalledWith(7, 5);
+    expect(fileSaver.show).toHaveBeenCalledWith(expect.any(Blob), tab, 'Scheda di allenamento.pdf');
+    open.mockRestore();
+  });
+
+  it('"Visualizza": se il server rifiuta chiude la scheda e avvisa', async () => {
+    const tab = { close: vi.fn() } as unknown as Window;
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab);
+    const { el, fixture } = await render();
+    api.materialFile.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    button(el, 'Visualizza').click();
+    fixture.detectChanges();
+
+    expect(tab.close).toHaveBeenCalled();
+    expect(notify.error).toHaveBeenCalledWith('Impossibile aprire il file.');
+    expect(fileSaver.show).not.toHaveBeenCalled();
+    open.mockRestore();
+  });
+
+  it('"Scarica" salva il file con il titolo', async () => {
+    const { el, fixture } = await render();
+
+    button(el, 'Scarica').click();
+    fixture.detectChanges();
+
+    expect(api.materialFile).toHaveBeenCalledWith(7, 5);
+    expect(fileSaver.save).toHaveBeenCalledWith(expect.any(Blob), 'Scheda di allenamento.pdf');
   });
 
   it('è accessibile (WCAG 2.2 AA, senza il contrasto), anche con un errore sul file', async () => {
