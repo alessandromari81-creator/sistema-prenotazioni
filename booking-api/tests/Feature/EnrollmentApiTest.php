@@ -39,18 +39,31 @@ class EnrollmentApiTest extends TestCase
 
     // ---------- iscriversi ----------
 
-    public function test_a_student_can_enroll_and_gets_the_updated_course(): void
+    public function test_enrolling_answers_204_with_no_body(): void
+    {
+        $user = $this->loginAsSubscribedStudent();
+        $course = Course::factory()->create(['capacity' => 5]);
+
+        $response = $this->postJson("/api/courses/{$course->id}/enrollment")->assertNoContent();
+
+        // È un comando: l'esito sta nel codice di stato, non c'è un corpo
+        $this->assertSame('', $response->getContent());
+        $this->assertDatabaseHas('enrollments', ['course_id' => $course->id, 'user_id' => $user->id, 'status' => 'active']);
+    }
+
+    public function test_the_updated_course_is_read_with_a_get_after_enrolling(): void
     {
         $this->loginAsSubscribedStudent();
         $course = Course::factory()->create(['capacity' => 5]);
 
-        $this->postJson("/api/courses/{$course->id}/enrollment")
-            ->assertCreated()
-            ->assertJsonPath('status', 'active')
-            ->assertJsonPath('course.id', $course->id)
-            ->assertJsonPath('course.enrolled_count', 1)
-            ->assertJsonPath('course.spots_left', 4)
-            ->assertJsonPath('course.is_enrolled', true);
+        $this->postJson("/api/courses/{$course->id}/enrollment")->assertNoContent();
+
+        // I dati aggiornati (iscritti, posti liberi, "sono iscritto?") si chiedono al corso
+        $this->getJson("/api/courses/{$course->id}")
+            ->assertOk()
+            ->assertJsonPath('enrolled_count', 1)
+            ->assertJsonPath('spots_left', 4)
+            ->assertJsonPath('is_enrolled', true);
     }
 
     public function test_enrolling_without_a_subscription_is_refused(): void
@@ -80,7 +93,7 @@ class EnrollmentApiTest extends TestCase
         Course::factory()->create()->instructors()->attach($user->id);
         $other = Course::factory()->create();
 
-        $this->postJson("/api/courses/{$other->id}/enrollment")->assertCreated();
+        $this->postJson("/api/courses/{$other->id}/enrollment")->assertNoContent();
     }
 
     public function test_a_full_course_is_refused(): void
@@ -100,7 +113,7 @@ class EnrollmentApiTest extends TestCase
         $first = Course::factory()->create();
         $second = Course::factory()->create();
 
-        $this->postJson("/api/courses/{$first->id}/enrollment")->assertCreated();
+        $this->postJson("/api/courses/{$first->id}/enrollment")->assertNoContent();
         $this->postJson("/api/courses/{$second->id}/enrollment")
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['subscription']);
@@ -111,7 +124,7 @@ class EnrollmentApiTest extends TestCase
         $this->loginAsSubscribedStudent();
         $course = Course::factory()->create();
 
-        $this->postJson("/api/courses/{$course->id}/enrollment")->assertCreated();
+        $this->postJson("/api/courses/{$course->id}/enrollment")->assertNoContent();
         $this->postJson("/api/courses/{$course->id}/enrollment")
             ->assertUnprocessable()
             ->assertJsonPath('errors.course.0', 'Sei già iscritto a questo corso.');
@@ -138,13 +151,27 @@ class EnrollmentApiTest extends TestCase
     {
         $this->loginAsSubscribedStudent();
         $course = Course::factory()->create(['capacity' => 5]);
-        $this->postJson("/api/courses/{$course->id}/enrollment")->assertCreated();
+        $this->postJson("/api/courses/{$course->id}/enrollment")->assertNoContent();
 
-        $this->deleteJson("/api/courses/{$course->id}/enrollment")
+        $response = $this->deleteJson("/api/courses/{$course->id}/enrollment")->assertNoContent();
+
+        $this->assertSame('', $response->getContent());
+        $this->getJson("/api/courses/{$course->id}")
             ->assertOk()
-            ->assertJsonPath('status', 'cancelled')
-            ->assertJsonPath('course.enrolled_count', 0)
-            ->assertJsonPath('course.is_enrolled', false);
+            ->assertJsonPath('enrolled_count', 0)
+            ->assertJsonPath('spots_left', 5)
+            ->assertJsonPath('is_enrolled', false);
+    }
+
+    public function test_cancelling_keeps_the_row_with_status_cancelled(): void
+    {
+        $user = $this->loginAsSubscribedStudent();
+        $course = Course::factory()->create();
+        $this->postJson("/api/courses/{$course->id}/enrollment")->assertNoContent();
+
+        $this->deleteJson("/api/courses/{$course->id}/enrollment")->assertNoContent();
+
+        $this->assertDatabaseHas('enrollments', ['course_id' => $course->id, 'user_id' => $user->id, 'status' => 'cancelled']);
     }
 
     public function test_cancelling_without_being_enrolled_is_refused(): void
@@ -250,7 +277,7 @@ class EnrollmentApiTest extends TestCase
 
         // 2. Lo studente si iscrive
         $this->actingAs($student);
-        $this->postJson("/api/courses/{$courseId}/enrollment")->assertCreated();
+        $this->postJson("/api/courses/{$courseId}/enrollment")->assertNoContent();
         $this->getJson('/api/me/courses')->assertJsonPath('0.name', 'Yoga');
 
         // 3. L'istruttore vede il corso che insegna e l'elenco degli iscritti

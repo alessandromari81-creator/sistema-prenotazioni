@@ -75,14 +75,14 @@ export class CourseService {
     return this.http.get<Enrollment[]>(`${this.base}/${courseId}/students`);
   }
 
-  /** Iscrive l'utente collegato al corso. */
-  enroll(courseId: number): Observable<Enrollment> {
-    return this.http.post<Enrollment>(`${this.base}/${courseId}/enrollment`, {});
+  /** Iscrive l'utente collegato al corso. Il server risponde 204 senza corpo: i dati aggiornati si rileggono con get(). */
+  enroll(courseId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/${courseId}/enrollment`, {});
   }
 
-  /** Annulla l'iscrizione dell'utente collegato al corso. */
-  cancelEnrollment(courseId: number): Observable<Enrollment> {
-    return this.http.delete<Enrollment>(`${this.base}/${courseId}/enrollment`);
+  /** Annulla l'iscrizione dell'utente collegato al corso. Risposta 204 senza corpo: i dati aggiornati si rileggono con get(). */
+  cancelEnrollment(courseId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${courseId}/enrollment`);
   }
 
   /** I corsi a cui l'utente collegato è iscritto. */

@@ -44,11 +44,11 @@ describe('CoursesListComponent', () => {
   });
 
   let fixture: ComponentFixture<CoursesListComponent>;
-  let api: { list: ReturnType<typeof vi.fn>; enroll: ReturnType<typeof vi.fn>; cancelEnrollment: ReturnType<typeof vi.fn> };
+  let api: { list: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>; enroll: ReturnType<typeof vi.fn>; cancelEnrollment: ReturnType<typeof vi.fn> };
   let el: HTMLElement;
 
   async function setup(courses: Course[], isAdmin = false) {
-    api = { list: vi.fn().mockReturnValue(of(page(courses))), enroll: vi.fn(), cancelEnrollment: vi.fn() };
+    api = { list: vi.fn().mockReturnValue(of(page(courses))), get: vi.fn(), enroll: vi.fn(), cancelEnrollment: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [CoursesListComponent],
@@ -119,12 +119,14 @@ describe('CoursesListComponent', () => {
   it('iscrivendosi aggiorna la scheda e annuncia l\'esito', async () => {
     await setup([course(1, { name: 'Yoga' })]);
     const updated = course(1, { name: 'Yoga', is_enrolled: true, spots_left: 6, enrolled_count: 4 });
-    api.enroll.mockReturnValue(of({ id: 1, course_id: 1, user_id: 1, status: 'active', course: updated, created_at: null }));
+    api.enroll.mockReturnValue(of(undefined)); // 204 senza corpo
+    api.get.mockReturnValue(of(updated)); // i dati aggiornati si rileggono
 
     button('Iscriviti a Yoga')!.click();
     fixture.detectChanges();
 
     expect(api.enroll).toHaveBeenCalledWith(1);
+    expect(api.get).toHaveBeenCalledWith(1); // la scheda si aggiorna rileggendo il corso
     expect(text()).toContain('Sei iscritto');
     expect(text()).toContain('6 posti liberi');
     expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Iscrizione al corso Yoga completata.'));
@@ -143,7 +145,8 @@ describe('CoursesListComponent', () => {
 
   it('dopo un\'azione non resta nessun avviso fisso nella pagina (l\'esito è nella snackbar)', async () => {
     await setup([course(1, { name: 'Yoga' })]);
-    api.enroll.mockReturnValue(of({ id: 1, course_id: 1, user_id: 1, status: 'active', course: course(1, { name: 'Yoga', is_enrolled: true }), created_at: null }));
+    api.enroll.mockReturnValue(of(undefined)); // 204 senza corpo
+    api.get.mockReturnValue(of(course(1, { name: 'Yoga', is_enrolled: true }))); // i dati aggiornati si rileggono
 
     button('Iscriviti a Yoga')!.click();
     fixture.detectChanges();
@@ -152,10 +155,24 @@ describe('CoursesListComponent', () => {
     expect(el.querySelectorAll('.alert')).toHaveLength(0);
   });
 
+  it('se la rilettura del corso fallisce, l\'azione resta riuscita e si ricarica l\'elenco', async () => {
+    await setup([course(1, { name: 'Yoga' })]);
+    api.enroll.mockReturnValue(of(undefined));
+    api.get.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500, error: null })));
+    api.list.mockClear();
+
+    button('Iscriviti a Yoga')!.click();
+    fixture.detectChanges();
+
+    expect(notify.success).toHaveBeenCalledWith('Iscrizione al corso Yoga completata.');
+    expect(api.list).toHaveBeenCalledTimes(1); // ricaricato per tornare allo stato vero
+  });
+
   it('annullando l\'iscrizione aggiorna la scheda', async () => {
     await setup([course(1, { name: 'Yoga', is_enrolled: true })]);
     const updated = course(1, { name: 'Yoga', is_enrolled: false, spots_left: 8 });
-    api.cancelEnrollment.mockReturnValue(of({ id: 1, course_id: 1, user_id: 1, status: 'cancelled', course: updated, created_at: null }));
+    api.cancelEnrollment.mockReturnValue(of(undefined)); // 204 senza corpo
+    api.get.mockReturnValue(of(updated)); // i dati aggiornati si rileggono
 
     button('Annulla iscrizione a Yoga')!.click();
     fixture.detectChanges();
@@ -165,7 +182,7 @@ describe('CoursesListComponent', () => {
   });
 
   it('se il caricamento fallisce mostra un avviso', async () => {
-    api = { list: vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500, error: null }))), enroll: vi.fn(), cancelEnrollment: vi.fn() };
+    api = { list: vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500, error: null }))), get: vi.fn(), enroll: vi.fn(), cancelEnrollment: vi.fn() };
     await TestBed.configureTestingModule({
       imports: [CoursesListComponent],
       providers: [{ provide: NotificationService, useValue: notify }, provideRouter([]), { provide: CourseService, useValue: api }, { provide: AuthService, useValue: { isAdmin: () => false } }],

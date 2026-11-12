@@ -115,8 +115,9 @@ export class CoursesListComponent implements OnInit {
   }
 
   /**
-   * Esegue un'azione sull'iscrizione: durante l'attesa blocca i pulsanti di quel corso, poi mostra l'esito
-   * e sostituisce la scheda con il corso aggiornato restituito dal server.
+   * Esegue un'azione sull'iscrizione: durante l'attesa blocca i pulsanti di quel corso, poi mostra l'esito e
+   * rilegge il corso. Il server risponde 204 senza corpo, quindi i dati aggiornati (iscritti, posti liberi, "sono
+   * iscritto?") si chiedono con una lettura.
    */
   private runAction(
     course: Course,
@@ -126,16 +127,30 @@ export class CoursesListComponent implements OnInit {
     this.busyId.set(course.id);
 
     request.subscribe({
-      next: (enrollment) => {
-        if (enrollment.course) {
-          this.courses.update((list) => list.map((c) => (c.id === course.id ? enrollment.course! : c)));
-        }
+      next: () => {
         this.notify.success(successMessage);
-        this.busyId.set(null);
+        this.refreshCourse(course.id);
       },
       error: (e: HttpErrorResponse) => {
         this.notify.error(apiErrorMessage(e, 'Operazione non riuscita.'));
         this.busyId.set(null);
+      },
+    });
+  }
+
+  /**
+   * Rilegge un corso e ne sostituisce la scheda nell'elenco (iscritti, posti liberi, stato dell'iscrizione).
+   * Se la lettura fallisce ricarica l'intero elenco. Alla fine sblocca i pulsanti di quel corso.
+   */
+  private refreshCourse(id: number): void {
+    this.api.get(id).subscribe({
+      next: (updated) => {
+        this.courses.update((list) => list.map((c) => (c.id === id ? updated : c)));
+        this.busyId.set(null);
+      },
+      error: () => {
+        this.busyId.set(null);
+        this.load();
       },
     });
   }

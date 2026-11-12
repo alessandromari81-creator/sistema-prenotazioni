@@ -253,10 +253,10 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 ## Test
 
 ```bash
-# Backend: 258 test (PostgreSQL, database dedicato "testing")
+# Backend: 260 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
-# Frontend: 137 test (Vitest + axe-core)
+# Frontend: 140 test (Vitest + axe-core)
 cd booking-frontend && ng test --watch=false
 ```
 
@@ -287,7 +287,7 @@ funziona con il tuo token.
 | POST / PUT / DELETE | `/courses`, `/courses/{id}` | Crea, modifica, elimina un corso | admin |
 | PUT / DELETE | `/courses/{id}/instructors/{user}` | Assegna / toglie un istruttore | admin |
 | GET | `/courses/{id}/students` | Iscritti al corso | admin e istruttori del corso |
-| POST / DELETE | `/courses/{id}/enrollment` | Iscriviti / annulla la tua iscrizione | autenticato |
+| POST / DELETE | `/courses/{id}/enrollment` | Iscriviti / annulla la tua iscrizione (204 senza corpo: i dati aggiornati si rileggono con `GET /courses/{id}`) | autenticato |
 | GET | `/me/courses`, `/me/teaching`, `/me/subscription` | I miei corsi, quelli che insegno, il mio abbonamento | autenticato |
 | GET | `/subscription-plans` | Piani di abbonamento | autenticato |
 | POST / PUT / DELETE | `/subscription-plans`, `/subscription-plans/{id}` | Gestione dei piani | admin |

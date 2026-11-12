@@ -96,20 +96,39 @@ export class CourseDetailComponent implements OnInit {
   }
 
   /**
-   * Esegue un'azione sull'iscrizione: blocca i pulsanti durante l'attesa, mostra l'esito e aggiorna il corso
-   * con i dati restituiti dal server.
+   * Esegue un'azione sull'iscrizione: blocca i pulsanti durante l'attesa, mostra l'esito e rilegge il corso (il server
+   * risponde 204 senza corpo, quindi iscritti, posti liberi e "sono iscritto?" si chiedono con una lettura).
    */
   private act(request: () => ReturnType<CourseService['enroll']>, successMessage: string): void {
     this.busy.set(true);
 
     request().subscribe({
-      next: (enrollment) => {
-        if (enrollment.course) this.course.set(enrollment.course);
+      next: () => {
         this.notify.success(successMessage);
-        this.busy.set(false);
+        this.refresh();
       },
       error: (e: HttpErrorResponse) => {
         this.notify.error(apiErrorMessage(e, 'Operazione non riuscita.'));
+        this.busy.set(false);
+      },
+    });
+  }
+
+  /**
+   * Rilegge il corso con i dati aggiornati (e, se l'utente può vederlo, l'elenco degli iscritti). Alla fine sblocca i
+   * pulsanti. Se la lettura fallisce lo dice in un avviso: l'azione era comunque riuscita.
+   */
+  private refresh(): void {
+    const id = this.course()!.id;
+
+    this.api.get(id).subscribe({
+      next: (course) => {
+        this.course.set(course);
+        if (this.canSeeStudents()) this.loadStudents(course.id);
+        this.busy.set(false);
+      },
+      error: (e: HttpErrorResponse) => {
+        this.notify.error(apiErrorMessage(e, 'Impossibile aggiornare i dati del corso.'));
         this.busy.set(false);
       },
     });

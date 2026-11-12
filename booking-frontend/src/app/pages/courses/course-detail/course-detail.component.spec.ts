@@ -102,7 +102,8 @@ describe('CourseDetailComponent', () => {
 
   it('iscrivendosi aggiorna il corso e annuncia l\'esito', async () => {
     const el = await render(course());
-    api.enroll.mockReturnValue(of({ id: 1, course_id: 7, user_id: 1, status: 'active', created_at: null, course: course({ is_enrolled: true, spots_left: 7, enrolled_count: 5 }) }));
+    api.enroll.mockReturnValue(of(undefined)); // 204 senza corpo
+    api.get.mockReturnValue(of(course({ is_enrolled: true, spots_left: 7, enrolled_count: 5 }))); // i dati aggiornati si rileggono
 
     Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes('Iscriviti'))!.click();
     fixture.detectChanges();
@@ -116,7 +117,8 @@ describe('CourseDetailComponent', () => {
 
   it('annullando l\'iscrizione il corso torna iscrivibile', async () => {
     const el = await render(course({ is_enrolled: true }));
-    api.cancelEnrollment.mockReturnValue(of({ id: 1, course_id: 7, user_id: 1, status: 'cancelled', created_at: null, course: course({ is_enrolled: false }) }));
+    api.cancelEnrollment.mockReturnValue(of(undefined)); // 204 senza corpo
+    api.get.mockReturnValue(of(course({ is_enrolled: false }))); // i dati aggiornati si rileggono
 
     Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes('Annulla iscrizione'))!.click();
     fixture.detectChanges();
@@ -135,6 +137,29 @@ describe('CourseDetailComponent', () => {
     fixture.detectChanges();
 
     expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('Il corso è al completo.'));
+  });
+
+  it('se la rilettura del corso fallisce lo dice, ma l\'iscrizione era comunque riuscita', async () => {
+    const el = await render(course());
+    api.enroll.mockReturnValue(of(undefined));
+    api.get.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500, error: null })));
+
+    Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes('Iscriviti'))!.click();
+    fixture.detectChanges();
+
+    expect(notify.success).toHaveBeenCalledWith('Iscrizione completata.');
+    expect(notify.error).toHaveBeenCalledWith('Impossibile aggiornare i dati del corso.');
+  });
+
+  it('dopo l\'iscrizione i pulsanti tornano attivi quando il corso è stato riletto', async () => {
+    const el = await render(course());
+    api.enroll.mockReturnValue(of(undefined));
+    api.get.mockReturnValue(of(course({ is_enrolled: true })));
+
+    Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes('Iscriviti'))!.click();
+    fixture.detectChanges();
+
+    expect(Array.from(el.querySelectorAll('button')).every((b) => !b.disabled)).toBe(true);
   });
 
   it('se il corso non esiste mostra un avviso', async () => {

@@ -61,7 +61,7 @@ tags:
   - name: Istruttori
     description: Assegnazione degli istruttori ai corsi (admin) ed elenco degli iscritti
   - name: Iscrizioni
-    description: Iscriversi a un corso e vedere le proprie iscrizioni
+    description: Iscriversi a un corso (risposta 204 senza corpo) e vedere le proprie iscrizioni
   - name: Abbonamenti
     description: Piani di abbonamento e abbonamenti assegnati agli utenti
   - name: Sale
@@ -800,14 +800,11 @@ paths:
         Regole, nell'ordine: il corso è attivo; non sei istruttore di quel corso; non sei già iscritto; hai un
         abbonamento attivo; non superi il numero di corsi del piano; il corso ha posti liberi. Se una regola non è
         rispettata la risposta è 422 con il messaggio nel campo `course` o `subscription`. Un'iscrizione annullata
-        in precedenza viene riattivata.
+        in precedenza viene riattivata. **Non restituisce nulla** (204): per i dati aggiornati (iscritti, posti liberi,
+        `is_enrolled`) si rilegge il corso con `GET /api/courses/{course}`.
       responses:
-        '201':
-          description: Iscrizione creata, con il corso aggiornato (iscritti, posti liberi).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Enrollment'
+        '204':
+          description: Iscrizione registrata. Nessun corpo.
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -817,14 +814,12 @@ paths:
     delete:
       tags: [Iscrizioni]
       summary: Annulla la tua iscrizione al corso
-      description: La riga resta con stato `cancelled` e il posto torna libero. 422 se non sei iscritto.
+      description: |
+        La riga resta con stato `cancelled` e il posto torna libero. 422 se non sei iscritto. **Non restituisce nulla**
+        (204): per i dati aggiornati si rilegge il corso con `GET /api/courses/{course}`.
       responses:
-        '200':
-          description: L'iscrizione annullata, con il corso aggiornato.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Enrollment'
+        '204':
+          description: Iscrizione annullata. Nessun corpo.
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -1207,10 +1202,6 @@ components:
         course_id: { type: integer }
         user_id: { type: integer }
         status: { type: string, enum: [active, cancelled] }
-        course:
-          description: Presente quando l'iscrizione viene creata o annullata.
-          allOf:
-            - $ref: '#/components/schemas/Course'
         student:
           description: Presente nell'elenco degli iscritti di un corso.
           allOf:

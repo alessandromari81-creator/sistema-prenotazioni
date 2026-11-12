@@ -106,13 +106,12 @@ export interface Student {
   email: string;
 }
 
-// Iscrizione a un corso. "course" c'è quando si crea o annulla; "student" nell'elenco iscritti.
+// Iscrizione a un corso, come appare nell'elenco degli iscritti ("student"). Iscriversi e annullare rispondono 204 senza corpo.
 export interface Enrollment {
   id: number;
   course_id: number;
   user_id: number;
   status: 'active' | 'cancelled';
-  course?: Course;
   student?: Student;
   created_at: string | null;
 }
