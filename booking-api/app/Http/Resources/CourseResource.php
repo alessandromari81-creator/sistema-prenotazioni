@@ -26,6 +26,10 @@ class CourseResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
+            // Indirizzo relativo dell'immagine (con la data di modifica, così il browser la ricarica se cambia) o null
+            'image_url' => $this->image_path
+                ? "/api/courses/{$this->id}/image?v={$this->updated_at?->timestamp}"
+                : null,
             'capacity' => $this->capacity,
             'day_of_week' => $this->day_of_week,
             'start_time' => $this->start_time,

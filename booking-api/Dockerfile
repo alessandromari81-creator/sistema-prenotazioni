@@ -19,7 +19,7 @@ WORKDIR /app
 COPY --from=vendor /app /app
 COPY docker/entrypoint.sh /usr/local/bin/app-entrypoint
 RUN chmod +x /usr/local/bin/app-entrypoint \
-    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && mkdir -p storage/app/private/course-images storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chmod -R a+rwX storage bootstrap/cache \
     && php artisan package:discover --ansi
 

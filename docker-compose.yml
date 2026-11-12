@@ -103,6 +103,8 @@ services:
     environment:
       <<: *api-env
       CONTAINER_ROLE: app
+    volumes:
+      - course-images:/app/storage/app/private   # le immagini dei corsi caricate dall'admin: restano dopo un riavvio
     depends_on:
       db:
         condition: service_healthy
@@ -171,3 +173,4 @@ services:
 volumes:
   db-data:
   keycloak-data:
+  course-images:

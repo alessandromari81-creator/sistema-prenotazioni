@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AvailabilityController;
 use App\Http\Controllers\Api\BookableController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\CourseController;
+use App\Http\Controllers\Api\CourseImageController;
 use App\Http\Controllers\Api\CourseInstructorController;
 use App\Http\Controllers\Api\CourseStudentController;
 use App\Http\Controllers\Api\EnrollmentController;
@@ -18,10 +19,14 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Rotte dell'API (prefisso /api, aggiunto da Laravel)
 |--------------------------------------------------------------------------
-| Non ci sono rotte pubbliche: login, logout e registrazione le gestisce Keycloak.
-| Ogni richiesta deve portare il JWT di Keycloak nell'header "Authorization: Bearer <token>".
+| Login, logout e registrazione le gestisce Keycloak. L'unica rotta pubblica è l'immagine di un corso (un tag <img>
+| non può mandare il token). Ogni altra richiesta deve portare il JWT di Keycloak nell'header "Authorization: Bearer <token>".
 | Il middleware "auth:keycloak" lo verifica e risponde 401 se manca o non è valido.
 */
+
+// L'immagine di un corso: pubblica, il browser la legge con un semplice <img src>
+Route::get('/courses/{course}/image', [CourseImageController::class, 'show'])->middleware('throttle:api');
+
 Route::middleware(['auth:keycloak', 'throttle:api'])->group(function () {
 
     // L'utente a cui appartiene il token (il frontend lo chiama dopo il login)
@@ -51,6 +56,8 @@ Route::middleware(['auth:keycloak', 'throttle:api'])->group(function () {
         Route::post('/courses', [CourseController::class, 'store']);
         Route::put('/courses/{course}', [CourseController::class, 'update']);
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+        Route::post('/courses/{course}/image', [CourseImageController::class, 'store']);
+        Route::delete('/courses/{course}/image', [CourseImageController::class, 'destroy']);
         Route::put('/courses/{course}/instructors/{user}', [CourseInstructorController::class, 'store']);
         Route::delete('/courses/{course}/instructors/{user}', [CourseInstructorController::class, 'destroy']);
 

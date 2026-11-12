@@ -722,6 +722,71 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /api/courses/{course}/image:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    get:
+      tags: [Corsi]
+      summary: Legge l'immagine di un corso (pubblica)
+      description: |
+        Restituisce il file. **Non richiede il token**: la legge un tag `<img>`, che non può mandare l'header
+        `Authorization`. 404 se il corso non ha immagine. Il campo `image_url` del corso contiene già questo indirizzo,
+        con `?v=` (la data di modifica) per far ricaricare l'immagine al browser quando cambia.
+      security: []
+      responses:
+        '200':
+          description: L'immagine (JPEG, PNG o WebP).
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Corsi]
+      summary: Carica o sostituisce l'immagine del corso (admin)
+      description: |
+        Richiesta `multipart/form-data` con il campo `image` (JPEG, PNG o WebP, fino a 2 MB; l'SVG non è ammesso perché
+        può contenere script). Il nome del file lo sceglie il server. Se c'era già un'immagine, il vecchio file viene
+        cancellato. Si usa POST e non PUT perché PHP non legge i file di una richiesta PUT.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        '200':
+          description: Il corso aggiornato (con `image_url`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Corsi]
+      summary: Toglie l'immagine del corso (admin)
+      description: Cancella il file e il percorso salvato. Se il corso non aveva immagine non cambia nulla. 204 senza corpo.
+      responses:
+        '204':
+          description: Fatto.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/courses/{course}/instructors/{user}:
     parameters:
       - $ref: '#/components/parameters/CourseId'
@@ -1164,6 +1229,7 @@ components:
         id: { type: integer }
         name: { type: string }
         description: { type: string, nullable: true }
+        image_url: { type: string, nullable: true, example: '/api/courses/1/image?v=1762950000', description: "Indirizzo relativo dell'immagine, o null se il corso non ne ha." }
         capacity: { type: integer, description: 'Posti disponibili.' }
         day_of_week: { type: integer, minimum: 1, maximum: 7, description: '1 = lunedì ... 7 = domenica' }
         start_time: { type: string, example: '18:30:00', description: 'Ora di inizio (orario di Roma).' }

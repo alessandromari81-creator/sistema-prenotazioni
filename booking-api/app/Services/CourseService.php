@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Le regole sulla gestione dei corsi: creazione, modifica, eliminazione e assegnazione degli istruttori.
+ * Le regole sulla gestione dei corsi: creazione, modifica, eliminazione, immagine e assegnazione degli istruttori.
  */
 class CourseService
 {
@@ -68,7 +70,40 @@ class CourseService
             ]);
         }
 
+        $this->deleteImageFile($course);
         $course->delete();
+    }
+
+    /**
+     * Salva l'immagine del corso nel disco privato (cartella course-images) e toglie quella precedente, se c'era.
+     * Il nome del file lo sceglie Laravel (casuale): il nome originale dell'utente non viene mai usato.
+     */
+    public function setImage(Course $course, UploadedFile $file): Course
+    {
+        $previous = $course->image_path;
+
+        $course->update(['image_path' => $file->store('course-images', 'local')]);
+
+        if ($previous) {
+            Storage::disk('local')->delete($previous);
+        }
+
+        return $course;
+    }
+
+    /** Toglie l'immagine del corso (il file e il percorso salvato). Se non c'era non cambia nulla. */
+    public function removeImage(Course $course): void
+    {
+        $this->deleteImageFile($course);
+        $course->update(['image_path' => null]);
+    }
+
+    /** Cancella dal disco il file dell'immagine del corso, se esiste. */
+    private function deleteImageFile(Course $course): void
+    {
+        if ($course->image_path) {
+            Storage::disk('local')->delete($course->image_path);
+        }
     }
 
     /**

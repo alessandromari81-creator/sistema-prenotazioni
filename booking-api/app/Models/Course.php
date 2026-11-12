@@ -19,6 +19,7 @@ class Course extends Model
     protected $fillable = [
         'name',
         'description',
+        'image_path',
         'capacity',
         'day_of_week',
         'start_time',
