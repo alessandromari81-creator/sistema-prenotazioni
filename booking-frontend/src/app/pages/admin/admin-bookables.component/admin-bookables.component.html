@@ -4,25 +4,25 @@
 }
 
 <div class="page-header">
-  <h1>Gestione risorse</h1>
+  <h1>Gestione sale</h1>
 
   <a mat-flat-button routerLink="/admin/bookables/new">
     <mat-icon>add</mat-icon>
-    Nuova risorsa
+    Nuova sala
   </a>
 </div>
 
 <!-- Ricerca -->
 <div class="table-filters">
   <mat-form-field appearance="outline">
-    <mat-label>Cerca risorsa</mat-label>
+    <mat-label>Cerca sala</mat-label>
 
     <input
       matInput
       type="text"
       [value]="search()"
       (input)="onSearch($any($event.target).value)"
-      placeholder="Nome della risorsa">
+      placeholder="Nome della sala">
 
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
@@ -123,13 +123,13 @@
     [pageSizeOptions]="[5, 10, 15, 20, 50]"
     [showFirstLastButtons]="true"
     (page)="onPageChange($event)"
-    aria-label="Paginazione risorse">
+    aria-label="Paginazione sale">
   </mat-paginator>
 
 } @else {
 
   <p class="empty">
-    {{ search() ? 'Nessuna risorsa trovata.' : 'Non ci sono risorse.' }}
+    {{ search() ? 'Nessuna sala trovata.' : 'Non ci sono sale.' }}
   </p>
 
 }

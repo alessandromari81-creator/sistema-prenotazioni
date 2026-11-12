@@ -9,7 +9,7 @@ export interface User {
   teaches_courses?: boolean; // c'è solo in GET /api/user: vero se l'utente insegna in almeno un corso
 }
 
-// Fascia oraria settimanale di una risorsa.
+// Fascia oraria settimanale di una sala.
 // day_of_week: 1 = lunedì ... 7 = domenica; gli orari arrivano come "HH:MM:SS"
 export interface Availability {
   id: number;
@@ -26,7 +26,7 @@ export interface AvailabilityInput {
   end_time: string;
 }
 
-// Risorsa prenotabile (campi come nella tabella "bookables" del backend)
+// Sala prenotabile (campi come nella tabella "bookables" del backend)
 export interface Bookable {
   id: number;
   name: string;
@@ -36,7 +36,7 @@ export interface Bookable {
   availabilities?: Availability[]; // le fasce ci sono solo se il backend le carica
 }
 
-// Dati che l'admin invia per creare o modificare una risorsa
+// Dati che l'admin invia per creare o modificare una sala
 export interface BookableInput {
   name: string;
   description: string | null;

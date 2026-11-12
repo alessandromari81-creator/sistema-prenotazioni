@@ -87,7 +87,7 @@ export class BookablesListComponent implements OnInit {
       },
       error: (e: HttpErrorResponse) => {
         this.error.set(
-          apiErrorMessage(e, 'Impossibile caricare le risorse')
+          apiErrorMessage(e, 'Impossibile caricare le sale')
         );
         this.loading.set(false);
       },

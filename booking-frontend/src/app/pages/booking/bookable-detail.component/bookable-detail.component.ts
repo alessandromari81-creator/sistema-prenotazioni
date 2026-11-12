@@ -58,7 +58,7 @@ export class BookableDetailComponent implements OnInit {
   ngOnInit(): void {
     this.api.getBookable(this.id).subscribe({
       next: (b) => this.bookable.set(b),
-      error: () => this.error.set('Risorsa non trovata'),
+      error: () => this.error.set('Sala non trovata'),
     });
     this.loadSlots();
   }

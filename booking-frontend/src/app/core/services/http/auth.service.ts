@@ -74,6 +74,14 @@ export class AuthService {
     return this.keycloak.register({ redirectUri: window.location.origin + '/', locale: 'it' });
   }
 
+  /**
+   * Apre la pagina di gestione dell'account di Keycloak: da lì si cambiano nome, email e password.
+   * Sono dati di Keycloak, non dell'app, quindi non si modificano nel profilo dell'applicazione.
+   */
+  manageAccount(): Promise<void> {
+    return this.keycloak.accountManagement();
+  }
+
   /** Esce: chiude la sessione su Keycloak e torna alla pagina iniziale. */
   logout(): Promise<void> {
     this.user.set(null);

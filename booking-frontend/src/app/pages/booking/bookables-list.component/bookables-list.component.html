@@ -1,13 +1,13 @@
 
   <header class="page-header">
-    <h1>Risorse prenotabili</h1>
-    <p>Scegli una risorsa e prenota il tuo orario.</p>
+    <h1>Sale prenotabili</h1>
+    <p>Scegli una sala e prenota il tuo orario.</p>
   </header>
 
-  <section aria-label="Ricerca e ordinamento delle risorse">
+  <section aria-label="Ricerca e ordinamento delle sale">
 
     <mat-form-field appearance="outline">
-      <mat-label>Cerca risorsa</mat-label>
+      <mat-label>Cerca sala</mat-label>
       <input
         matInput
         [value]="search()"
@@ -49,10 +49,10 @@
 
   </section>
 
-  <section aria-label="Elenco delle risorse prenotabili">
+  <section aria-label="Elenco delle sale prenotabili">
 
     @if (loading()) {
-      <p role="status" aria-live="polite">Caricamento risorse...</p>
+      <p role="status" aria-live="polite">Caricamento sale...</p>
     }
 
     @if (error()) {
@@ -101,12 +101,12 @@
         [pageSizeOptions]="[2, 5, 10]"
         (page)="onPageChange($event)"
         showFirstLastButtons
-        aria-label="Paginazione delle risorse"
+        aria-label="Paginazione delle sale"
       />
     }
 
     @if (!loading() && !bookables().length && !error()) {
-      <p role="status">Nessuna risorsa disponibile.</p>
+      <p role="status">Nessuna sala disponibile.</p>
     }
 
   </section>

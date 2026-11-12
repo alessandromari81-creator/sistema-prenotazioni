@@ -23,7 +23,7 @@
       font-weight: 700; font-size: 1.15rem; text-align: center;
       color: var(--mat-sys-primary); text-decoration: none;
     }
-    .user-name { color: var(--mat-sys-on-surface-variant); }
+    .user-name { color: var(--mat-sys-on-surface-variant); text-decoration: underline; }
 
     /* Voce del menu della pagina corrente */
     .active-item { background: var(--mat-sys-secondary-container); }

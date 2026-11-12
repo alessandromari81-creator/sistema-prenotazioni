@@ -12,6 +12,7 @@ function fakeKeycloak(overrides: Record<string, unknown> = {}) {
     init: vi.fn().mockResolvedValue(false),
     login: vi.fn().mockResolvedValue(undefined),
     register: vi.fn().mockResolvedValue(undefined),
+    accountManagement: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     updateToken: vi.fn().mockResolvedValue(true),
     ...overrides,
@@ -96,6 +97,15 @@ describe('AuthService', () => {
     await service.register();
 
     expect(keycloak.register).toHaveBeenCalledWith({ redirectUri: `${window.location.origin}/`, locale: 'it' });
+  });
+
+  it('apre la gestione dell\'account di Keycloak (nome, email, password)', async () => {
+    const keycloak = fakeKeycloak();
+    const service = setup(keycloak);
+
+    await service.manageAccount();
+
+    expect(keycloak.accountManagement).toHaveBeenCalled();
   });
 
   it('il logout azzera l\'utente e chiude la sessione su Keycloak', async () => {

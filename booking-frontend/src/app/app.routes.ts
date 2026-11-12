@@ -15,6 +15,7 @@ import { AdminPlansComponent } from './pages/admin/admin-plans/admin-plans.compo
 import { AdminSubscriptionsComponent } from './pages/admin/admin-subscriptions/admin-subscriptions.component';
 import { BookableDetailComponent } from './pages/booking/bookable-detail.component/bookable-detail.component';
 import { BookablesListComponent } from './pages/booking/bookables-list.component/bookables-list.component';
+import { ProfileComponent } from './pages/profile/profile.component';
 import { MyBookingsComponent } from './pages/booking/my-bookings.component/my-bookings.component';
 import { CourseDetailComponent } from './pages/courses/course-detail/course-detail.component';
 import { CoursesListComponent } from './pages/courses/courses-list/courses-list.component';
@@ -34,6 +35,9 @@ export const routes: Routes = [
       // Pagina pubblica: nessuna guardia
       { path: '', component: HomeComponent, pathMatch: 'full', title: 'Palestra' },
 
+      // Il proprio profilo: per tutti gli utenti collegati
+      { path: 'profile', component: ProfileComponent, canActivate: [authGuard], title: 'Il mio profilo - Palestra' },
+
       // Corsi: per tutti gli utenti collegati
       { path: 'courses', component: CoursesListComponent, canActivate: [authGuard], title: 'Corsi - Palestra' },
       { path: 'courses/:id', component: CourseDetailComponent, canActivate: [authGuard], title: 'Dettaglio del corso - Palestra' },
@@ -42,8 +46,8 @@ export const routes: Routes = [
       { path: 'teaching', component: TeachingComponent, canActivate: [instructorGuard], title: 'Corsi che insegno - Palestra' },
 
       // Prenotazione di sale e slot
-      { path: 'bookables', component: BookablesListComponent, canActivate: [authGuard], title: 'Risorse - Palestra' },
-      { path: 'bookables/:id', component: BookableDetailComponent, canActivate: [authGuard], title: 'Prenota una risorsa - Palestra' },
+      { path: 'bookables', component: BookablesListComponent, canActivate: [authGuard], title: 'Sale - Palestra' },
+      { path: 'bookables/:id', component: BookableDetailComponent, canActivate: [authGuard], title: 'Prenota una sala - Palestra' },
       { path: 'my-bookings', component: MyBookingsComponent, canActivate: [authGuard], title: 'Le mie prenotazioni - Palestra' },
 
       // Area admin: accessibile solo con il ruolo "admin" (adminGuard)
@@ -55,10 +59,10 @@ export const routes: Routes = [
       { path: 'admin/plans', component: AdminPlansComponent, canActivate: [adminGuard], title: 'Piani di abbonamento - Palestra' },
       { path: 'admin/plans/new', component: AdminPlanFormComponent, canActivate: [adminGuard], title: 'Nuovo piano - Palestra' },
       { path: 'admin/plans/:id/edit', component: AdminPlanFormComponent, canActivate: [adminGuard], title: 'Modifica piano - Palestra' },
-      { path: 'admin/subscriptions', component: AdminSubscriptionsComponent, canActivate: [adminGuard], title: 'Abbonamenti - Palestra' },
-      { path: 'admin/bookables', component: AdminBookablesComponent, canActivate: [adminGuard], title: 'Gestione risorse - Palestra' },
-      { path: 'admin/bookables/new', component: AdminBookableFormComponent, canActivate: [adminGuard], title: 'Nuova risorsa - Palestra' },
-      { path: 'admin/bookables/:id/edit', component: AdminBookableFormComponent, canActivate: [adminGuard], title: 'Modifica risorsa - Palestra' },
+      { path: 'admin/subscriptions', component: AdminSubscriptionsComponent, canActivate: [adminGuard], title: 'Utenti e abbonamenti - Palestra' },
+      { path: 'admin/bookables', component: AdminBookablesComponent, canActivate: [adminGuard], title: 'Gestione sale - Palestra' },
+      { path: 'admin/bookables/new', component: AdminBookableFormComponent, canActivate: [adminGuard], title: 'Nuova sala - Palestra' },
+      { path: 'admin/bookables/:id/edit', component: AdminBookableFormComponent, canActivate: [adminGuard], title: 'Modifica sala - Palestra' },
       { path: 'admin/bookables/:id/availabilities', component: AdminAvailabilitiesComponent, canActivate: [adminGuard], title: 'Fasce orarie - Palestra' },
     ],
   },

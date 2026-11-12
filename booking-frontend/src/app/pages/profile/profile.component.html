@@ -1,0 +1,48 @@
+<header class="page-header">
+  <h1>Il mio profilo</h1>
+</header>
+
+@if (notice()) {
+  <p class="alert" role="status">{{ notice() }}</p>
+}
+@if (error()) {
+  <p class="alert alert--error" role="alert">{{ error() }}</p>
+}
+
+@if (auth.user(); as user) {
+  <section class="summary-box" aria-labelledby="access-title">
+    <h2 id="access-title">I tuoi dati di accesso</h2>
+    <p class="muted">
+      Nome, email e password sono gestiti dal tuo account: per cambiarli apri la gestione dell'account.
+    </p>
+
+    <dl class="details">
+      <dt>Nome</dt>
+      <dd>{{ user.name }}</dd>
+      <dt>Email</dt>
+      <dd>{{ user.email }}</dd>
+      <dt>Ruolo</dt>
+      <dd>{{ roleText() }}</dd>
+    </dl>
+
+    <button mat-stroked-button type="button" (click)="manageAccount()">Gestisci account e password</button>
+  </section>
+
+  <section aria-labelledby="data-title">
+    <h2 id="data-title">I tuoi dati</h2>
+
+    <form class="form-page" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>Indirizzo (facoltativo)</mat-label>
+        <input matInput formControlName="address" autocomplete="street-address" />
+        @if (form.controls.address.hasError('maxlength')) {
+          <mat-error>L'indirizzo può avere al massimo 255 caratteri</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="form-actions">
+        <button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'Salvataggio...' : 'Salva' }}</button>
+      </div>
+    </form>
+  </section>
+}

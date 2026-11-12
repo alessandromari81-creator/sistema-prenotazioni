@@ -171,3 +171,17 @@ main#main-content:focus, main#main-content:focus-visible { outline: none; }
 /* Elenco semplice, senza puntini né rientro (le voci hanno già un'icona o un pulsante) */
 .plain-list { list-style: none; padding: 0; margin: 0 0 1rem; }
 .plain-list li { padding: .5rem 0; border-bottom: 1px solid var(--mat-sys-outline-variant); flex-wrap: wrap; }
+
+/* Elenco di dati "etichetta: valore" (<dl>), a due colonne; su schermi stretti una sotto l'altra */
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: .4rem 1.25rem;
+  margin: 0 0 1.25rem;
+}
+.details dt { font-weight: 500; color: var(--mat-sys-on-surface-variant); }
+.details dd { margin: 0; }
+@media (max-width: 480px) {
+  .details { grid-template-columns: 1fr; gap: 0; }
+  .details dd { margin-bottom: .6rem; }
+}

@@ -64,7 +64,7 @@ export class AdminBookablesComponent implements OnInit {
     this.loadBookables();
   }
 
-  /** Carica tutte le risorse, comprese quelle disattivate. */
+  /** Carica tutte le sale, comprese quelle disattivate. */
   loadBookables(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -84,7 +84,7 @@ export class AdminBookablesComponent implements OnInit {
       },
       error: (e: HttpErrorResponse) => {
         this.error.set(
-          apiErrorMessage(e, 'Impossibile caricare le risorse')
+          apiErrorMessage(e, 'Impossibile caricare le sale')
         );
         this.loading.set(false);
       }
@@ -114,7 +114,7 @@ export class AdminBookablesComponent implements OnInit {
     this.loadBookables();
   }
 
-  /** Elimina una risorsa e aggiorna la tabella. */
+  /** Elimina una sala e aggiorna la tabella. */
   remove(b: Bookable): void {
     const ok = confirm(
       `Eliminare "${b.name}"? Verranno cancellati anche i suoi orari e tutte le sue prenotazioni.`

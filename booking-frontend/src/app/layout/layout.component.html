@@ -53,16 +53,23 @@
 
         <mat-divider />
 
-        <h3 matSubheader>Sale</h3>
+        <h3 matSubheader>Prenotazioni</h3>
 
         <a mat-list-item routerLink="/bookables" routerLinkActive="active-item" (click)="drawer.close()">
           <mat-icon matListItemIcon aria-hidden="true">meeting_room</mat-icon>
-          <span matListItemTitle>Risorse</span>
+          <span matListItemTitle>Sale</span>
         </a>
 
         <a mat-list-item routerLink="/my-bookings" routerLinkActive="active-item" (click)="drawer.close()">
           <mat-icon matListItemIcon aria-hidden="true">event_note</mat-icon>
           <span matListItemTitle>Le mie prenotazioni</span>
+        </a>
+
+        <mat-divider />
+
+        <a mat-list-item routerLink="/profile" routerLinkActive="active-item" (click)="drawer.close()">
+          <mat-icon matListItemIcon aria-hidden="true">account_circle</mat-icon>
+          <span matListItemTitle>Il mio profilo</span>
         </a>
 
         @if (auth.isAdmin()) {
@@ -82,12 +89,12 @@
 
           <a mat-list-item routerLink="/admin/subscriptions" routerLinkActive="active-item" (click)="drawer.close()">
             <mat-icon matListItemIcon aria-hidden="true">badge</mat-icon>
-            <span matListItemTitle>Abbonamenti</span>
+            <span matListItemTitle>Utenti e abbonamenti</span>
           </a>
 
           <a mat-list-item routerLink="/admin/bookables" routerLinkActive="active-item" (click)="drawer.close()">
             <mat-icon matListItemIcon aria-hidden="true">tune</mat-icon>
-            <span matListItemTitle>Gestione risorse</span>
+            <span matListItemTitle>Gestione sale</span>
           </a>
         }
 
@@ -134,7 +141,8 @@
 
       <div class="right">
         @if (auth.user()) {
-          <span class="user-name">{{ auth.user()?.name }}</span>
+          <!-- Il nome accessibile inizia con il testo visibile (WCAG 2.5.3): il resto lo leggono solo i lettori di schermo -->
+          <a class="user-name" routerLink="/profile">{{ auth.user()?.name }}<span class="sr-only"> (vai al mio profilo)</span></a>
 
           <button
             mat-icon-button

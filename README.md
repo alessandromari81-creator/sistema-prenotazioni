@@ -2,7 +2,7 @@
 
 Applicazione web per la gestione di una palestra. Gli **utenti** si iscrivono ai corsi con un abbonamento, gli
 **istruttori** vedono i corsi che insegnano e chi è iscritto, gli **amministratori** gestiscono corsi, istruttori,
-piani di abbonamento e abbonamenti. Si possono anche prenotare le sale (risorse) scegliendo uno slot libero.
+piani di abbonamento e abbonamenti. Si possono anche prenotare le sale scegliendo uno slot libero.
 
 Progetto da portfolio: API REST con **Laravel**, login e identità con **Keycloak** (token JWT), interfaccia a pagina
 singola con **Angular** e **Angular Material**, accessibile secondo **WCAG 2.2 AA**. Tutto in un'unica repository.
@@ -26,6 +26,7 @@ sistema-prenotazioni/
 - Iscrizione e annullamento dell'iscrizione, con posti liberi sempre aggiornati
 - "I miei corsi" con il riepilogo dell'abbonamento (durata, corsi in uso e disponibili)
 - Prenotazione delle sale: data, slot liberi, "Le mie prenotazioni" con annullamento
+- "Il mio profilo": dati di accesso in sola lettura (con il pulsante per gestirli su Keycloak) e indirizzo modificabile
 
 **Istruttore** (non è un ruolo globale: è un'assegnazione a un corso)
 - "Corsi che insegno" e, per ogni corso, l'elenco degli iscritti con nome ed email
@@ -34,7 +35,8 @@ sistema-prenotazioni/
 **Amministratore**
 - Creazione, modifica ed eliminazione dei corsi (giorno, ora, durata, posti, sala, stato)
 - Assegnazione e rimozione degli istruttori
-- Piani di abbonamento (durata e numero di corsi contemporanei) e abbonamenti agli utenti
+- Piani di abbonamento (durata e numero di corsi contemporanei)
+- "Utenti e abbonamenti": si cerca una persona, si vedono i suoi abbonamenti e si assegna o annulla un piano
 - Gestione delle sale e delle loro fasce orarie settimanali
 
 ## Screenshot
@@ -45,8 +47,8 @@ sistema-prenotazioni/
 | ![Pagina di accesso di Keycloak](docs/screenshots/keycloak-login.png) | ![Elenco dei corsi](docs/screenshots/corsi-elenco.png) |
 | **I miei corsi e l'abbonamento** | **Corso visto da un istruttore, con gli iscritti** |
 | ![I miei corsi](docs/screenshots/i-miei-corsi.png) | ![Dettaglio del corso con l'elenco degli iscritti](docs/screenshots/dettaglio-corso-istruttore.png) |
-| **Gestione corsi (admin)** | **Abbonamenti (admin)** |
-| ![Gestione dei corsi](docs/screenshots/admin-corsi.png) | ![Gestione degli abbonamenti](docs/screenshots/admin-abbonamenti.png) |
+| **Gestione corsi (admin)** | **Utenti e abbonamenti (admin)** |
+| ![Gestione dei corsi](docs/screenshots/admin-corsi.png) | ![Utenti e abbonamenti](docs/screenshots/admin-utenti-abbonamenti.png) |
 
 La regola "un istruttore non può essere anche studente dello stesso corso": il server la fa rispettare e l'interfaccia
 mostra il motivo.
@@ -57,7 +59,11 @@ Prenotazione delle sale:
 
 | | |
 |---|---|
-| ![Elenco delle risorse](docs/screenshots/risorse-elenco.png) | ![Scelta di data e slot](docs/screenshots/risorsa-scelta-slot.png) |
+| ![Elenco delle sale](docs/screenshots/sale-elenco.png) | ![Scelta di data e slot](docs/screenshots/sala-scelta-slot.png) |
+
+Il profilo: nome ed email (di Keycloak) in sola lettura, indirizzo (dell'applicazione) modificabile:
+
+![Il mio profilo](docs/screenshots/profilo.png)
 
 L'email di verifica inviata da Keycloak alla registrazione, letta su Mailpit:
 
@@ -92,7 +98,7 @@ Non ci sono cookie né protezione CSRF: il token è nell'header e il browser non
 
 **Prenotazione delle sale**
 - Gli slot **non sono salvati nel database**: si calcolano dalle fasce di disponibilità e dalla durata dello slot.
-- La prenotazione è validata lato server (risorsa attiva, orario dentro una fascia, griglia degli slot, nessuna
+- La prenotazione è validata lato server (sala attiva, orario dentro una fascia, griglia degli slot, nessuna
   sovrapposizione) in una transazione con `lockForUpdate`.
 - Un utente annulla fino a 2 ore prima dell'inizio, l'admin sempre. Gli istanti sono in UTC; le fasce in `Europe/Rome`.
 
@@ -157,6 +163,12 @@ La prima volta costruisce le immagini (qualche minuto) e Keycloak impiega una tr
 | `anna.bianchi@example.com` | studentessa **senza** abbonamento (provare l'iscrizione e vedere il rifiuto) |
 
 Oppure clicca "Registrati": Keycloak invia la mail di verifica a Mailpit.
+
+**Le email di Keycloak** (verifica alla registrazione e "Password dimenticata") si leggono su Mailpit, <http://localhost:8025>.
+"Password dimenticata" mostra sempre lo stesso messaggio ("riceverai un'email"), **ma la manda solo se l'indirizzo appartiene a un
+utente di Keycloak**: così non rivela chi è registrato. Se non arriva nulla, probabilmente l'email non è di un utente di
+Keycloak (che conosce solo i cinque di prova e chi si registra dalla pagina "Registrati"). Nello sviluppo con Sail le email
+di Keycloak vanno su <http://localhost:18025>, non sulla 8025 di Sail.
 
 - Parte tutto da solo: nginx con il frontend (inoltra `/api` al backend), Laravel con FrankenPHP, worker, scheduler,
   Postgres, Keycloak, Mailpit e Swagger UI. Migrazioni e dati di prova vengono eseguiti al primo avvio.
@@ -239,10 +251,10 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 ## Test
 
 ```bash
-# Backend: 250 test (PostgreSQL, database dedicato "testing")
+# Backend: 258 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
-# Frontend: 110 test (Vitest + axe-core)
+# Frontend: 120 test (Vitest + axe-core)
 cd booking-frontend && ng test --watch=false
 ```
 
@@ -267,7 +279,7 @@ funziona con il tuo token.
 
 | Metodo | Percorso | Descrizione | Accesso |
 |---|---|---|---|
-| GET | `/user` | Profilo dell'utente (e se insegna in qualche corso) | autenticato |
+| GET / PUT | `/user` | Profilo dell'utente (e se insegna in qualche corso) / modifica dell'indirizzo | autenticato |
 | GET | `/users` | Elenco utenti, con ricerca | admin |
 | GET | `/courses`, `/courses/{id}` | Corsi, con istruttori, iscritti e posti liberi | autenticato |
 | POST / PUT / DELETE | `/courses`, `/courses/{id}` | Crea, modifica, elimina un corso | admin |
@@ -279,8 +291,8 @@ funziona con il tuo token.
 | POST / PUT / DELETE | `/subscription-plans`, `/subscription-plans/{id}` | Gestione dei piani | admin |
 | GET / POST | `/users/{id}/subscriptions` | Abbonamenti di un utente / assegna un piano | admin |
 | DELETE | `/subscriptions/{id}` | Annulla un abbonamento | admin |
-| GET | `/bookables`, `/bookables/{id}` | Risorse (sale), `?all=1` include le disattivate | autenticato (`all` solo admin) |
-| POST / PUT / DELETE | `/bookables`, `/bookables/{id}` | Gestione delle risorse | admin |
+| GET | `/bookables`, `/bookables/{id}` | Sale prenotabili, `?all=1` include le disattivate | autenticato (`all` solo admin) |
+| POST / PUT / DELETE | `/bookables`, `/bookables/{id}` | Gestione delle sale | admin |
 | GET | `/bookables/{id}/slots?date=AAAA-MM-GG` | Slot liberi del giorno | autenticato |
 | POST / DELETE | `/bookables/{id}/availabilities`, `/availabilities/{id}` | Fasce orarie | admin |
 | GET / POST | `/bookings` | Prenotazioni (le proprie; admin: tutte) / nuova prenotazione | autenticato |

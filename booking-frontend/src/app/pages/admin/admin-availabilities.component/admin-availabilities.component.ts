@@ -26,7 +26,7 @@ const DAYS = [
   { n: 7, label: 'Domenica' },
 ];
 
-// Pagina admin: gestione delle fasce orarie settimanali di una risorsa
+// Pagina admin: gestione delle fasce orarie settimanali di una sala
 @Component({
   selector: 'app-admin-availabilities',
   standalone: true,
@@ -77,7 +77,7 @@ export class AdminAvailabilitiesComponent implements OnInit {
     end_time: ['13:00', Validators.required],
   });
 
-  /** All'apertura legge l'id dall'indirizzo e carica la risorsa con le sue fasce. */
+  /** All'apertura legge l'id dall'indirizzo e carica la sala con le sue fasce. */
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
 
@@ -88,7 +88,7 @@ export class AdminAvailabilitiesComponent implements OnInit {
         this.loading.set(false);
       },
       error: (e: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(e, 'Impossibile caricare la risorsa'));
+        this.error.set(apiErrorMessage(e, 'Impossibile caricare la sala'));
         this.loading.set(false);
       },
     });

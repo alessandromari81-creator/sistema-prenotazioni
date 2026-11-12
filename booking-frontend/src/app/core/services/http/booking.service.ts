@@ -5,14 +5,14 @@ import { environment } from '../../../../environments/environment';
 import { Availability, AvailabilityInput, Bookable, BookableInput, Booking, Slot } from '../../models/models';
 import { PaginatedResponse } from '../../interfaces/paginate-response.interface';
 
-// Unico punto in cui l'app parla con le API di risorse, slot e prenotazioni
+// Unico punto in cui l'app parla con le API di sale, slot e prenotazioni
 @Injectable({ providedIn: 'root' })
 export class BookingService {
   private http = inject(HttpClient);
   private base = environment.apiUrl;
 
     /**
-   * Elenco delle risorse (accetta sia un array sia { data: [...] }).
+   * Elenco delle sale (accetta sia un array sia { data: [...] }).
    * Con includeInactive = true chiede anche le disattivate (il backend lo concede solo all'admin).
    */
   getBookables(options: {
@@ -45,27 +45,27 @@ export class BookingService {
     );
   }
 
-  /** Dettaglio di una risorsa (accetta sia l'oggetto diretto sia { data: {...} }). */
+  /** Dettaglio di una sala (accetta sia l'oggetto diretto sia { data: {...} }). */
   getBookable(id: number): Observable<Bookable> {
     return this.http.get<any>(`${this.base}/bookables/${id}`).pipe(map((r) => r.data ?? r));
   }
 
-  /** Crea una nuova risorsa (solo admin: il backend risponde 403 agli altri). */
+  /** Crea una nuova sala (solo admin: il backend risponde 403 agli altri). */
   createBookable(data: BookableInput): Observable<Bookable> {
     return this.http.post<Bookable>(`${this.base}/bookables`, data);
   }
 
-  /** Modifica una risorsa esistente (solo admin). */
+  /** Modifica una sala esistente (solo admin). */
   updateBookable(id: number, data: BookableInput): Observable<Bookable> {
     return this.http.put<Bookable>(`${this.base}/bookables/${id}`, data);
   }
 
-  /** Elimina una risorsa con le sue disponibilità e prenotazioni (solo admin). */
+  /** Elimina una sala con le sue disponibilità e prenotazioni (solo admin). */
   deleteBookable(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/bookables/${id}`);
   }
 
-  /** Aggiunge una fascia oraria a una risorsa (solo admin; il backend rifiuta le sovrapposizioni con 422). */
+  /** Aggiunge una fascia oraria a una sala (solo admin; il backend rifiuta le sovrapposizioni con 422). */
   addAvailability(bookableId: number, data: AvailabilityInput): Observable<Availability> {
     return this.http.post<Availability>(`${this.base}/bookables/${bookableId}/availabilities`, data);
   }
@@ -75,7 +75,7 @@ export class BookingService {
     return this.http.delete<void>(`${this.base}/availabilities/${id}`);
   }
 
-  /** Slot liberi di una risorsa in un giorno (date nel formato AAAA-MM-GG). */
+  /** Slot liberi di una sala in un giorno (date nel formato AAAA-MM-GG). */
   getSlots(id: number, date: string): Observable<Slot[]> {
     return this.http.get<Slot[]>(`${this.base}/bookables/${id}/slots`, { params: { date } });
   }

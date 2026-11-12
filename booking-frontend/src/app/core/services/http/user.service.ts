@@ -7,11 +7,19 @@ import { User } from '../../models/models';
 
 /**
  * Le chiamate all'API sugli utenti. L'elenco è riservato agli amministratori: serve a scegliere
- * chi assegnare come istruttore o a chi dare un abbonamento.
+ * chi assegnare come istruttore o a chi dare un abbonamento. La modifica del profilo è di ognuno, per sé.
  */
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private http = inject(HttpClient);
+
+  /**
+   * Aggiorna il proprio profilo: per ora solo l'indirizzo (null lo cancella). Nome ed email sono di Keycloak e
+   * non si cambiano da qui. Restituisce il profilo aggiornato.
+   */
+  updateMe(address: string | null): Observable<User> {
+    return this.http.put<User>(`${environment.apiUrl}/user`, { address });
+  }
 
   /** Elenco paginato degli utenti, con ricerca per nome o email. */
   list(params: { search?: string; page?: number; perPage?: number } = {}): Observable<PaginatedResponse<User>> {

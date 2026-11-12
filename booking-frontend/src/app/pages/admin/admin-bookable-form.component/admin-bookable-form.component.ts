@@ -12,7 +12,7 @@ import { BookingService } from '../../../core/services/http/booking.service';
 import { BookableInput } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
 
-// Form unico per creare (/admin/bookables/new) e modificare (/admin/bookables/:id/edit) una risorsa
+// Form unico per creare (/admin/bookables/new) e modificare (/admin/bookables/:id/edit) una sala
 @Component({
   selector: 'app-admin-bookable-form',
   standalone: true,
@@ -36,7 +36,7 @@ export class AdminBookableFormComponent implements OnInit {
   private router = inject(Router);
   private snack = inject(MatSnackBar); // notifiche a comparsa
 
-  // null = stiamo creando una risorsa nuova; un numero = stiamo modificando quella risorsa
+  // null = stiamo creando una sala nuova; un numero = stiamo modificando quella sala
   bookableId: number | null = null;
 
   loading = signal(false);
@@ -50,7 +50,7 @@ export class AdminBookableFormComponent implements OnInit {
     is_active: [true],
   });
 
-  /** Se nell'indirizzo c'è un id siamo in modifica: carica la risorsa e riempie il form. */
+  /** Se nell'indirizzo c'è un id siamo in modifica: carica la sala e riempie il form. */
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (!idParam) return; // nessun id = creazione, il form parte con i valori predefiniti
@@ -68,7 +68,7 @@ export class AdminBookableFormComponent implements OnInit {
         this.loading.set(false);
       },
       error: (e: HttpErrorResponse) => {
-        this.snack.open(apiErrorMessage(e, 'Impossibile caricare la risorsa'), 'Chiudi', { duration: 5000 });
+        this.snack.open(apiErrorMessage(e, 'Impossibile caricare la sala'), 'Chiudi', { duration: 5000 });
         this.loading.set(false);
       },
     });
@@ -95,7 +95,7 @@ export class AdminBookableFormComponent implements OnInit {
 
     request$.subscribe({
       next: () => {
-        this.snack.open('Risorsa salvata ✔', 'Chiudi', { duration: 3000 });
+        this.snack.open('Sala salvata ✔', 'Chiudi', { duration: 3000 });
         this.router.navigate(['/admin/bookables']);
       },
       error: (e: HttpErrorResponse) => {
