@@ -1,34 +1,31 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;   // controller con register, login e logout
 use App\Http\Controllers\Api\AvailabilityController;
-use App\Http\Controllers\Api\BookableController;   // controller delle risorse prenotabili
+use App\Http\Controllers\Api\BookableController;
 use App\Http\Controllers\Api\BookingController;
-use App\Http\Controllers\Api\RegistrationController;
-use Illuminate\Http\Request;                   // serve alla rotta /user per leggere la richiesta
-use Illuminate\Support\Facades\Route;          // per definire le rotte
+use App\Http\Controllers\Api\CourseController;
+use App\Http\Controllers\Api\CourseInstructorController;
+use App\Http\Controllers\Api\CourseStudentController;
+use App\Http\Controllers\Api\EnrollmentController;
+use App\Http\Controllers\Api\MeController;
+use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\SubscriptionPlanController;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\UserSubscriptionController;
+use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Rotte dell'API (prefisso /api, aggiunto da Laravel)
+|--------------------------------------------------------------------------
+| Non ci sono rotte pubbliche: login, logout e registrazione le gestisce Keycloak.
+| Ogni richiesta deve portare il JWT di Keycloak nell'header "Authorization: Bearer <token>".
+| Il middleware "auth:keycloak" lo verifica e risponde 401 se manca o non è valido.
+*/
+Route::middleware(['auth:keycloak', 'throttle:api'])->group(function () {
 
-
-
-// Rotte pubbliche: non serve essere autenticati.
-// Laravel aggiunge in automatico il prefisso /api, quindi gli indirizzi
-// Rotte pubbliche (solo per chi NON è loggato)
-Route::post('/register', [RegistrationController::class, 'register'])->middleware('throttle:register');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
-
-// Conferma: la pagina del frontend raggiunta dal link nella mail invia email e token
-Route::post('/register/confirm', [RegistrationController::class, 'confirm'])
-    ->middleware('throttle:register-confirm');
-
-// Rotte protette: la richiesta deve contenere un token Sanctum valido,
-// altrimenti Laravel risponde con un errore 401 (non autenticato)
-Route::middleware('auth:sanctum')->group(function () {
-
-    // Revoca il token usato per la richiesta
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [AuthController::class, 'me']);
-
+    // L'utente a cui appartiene il token (il frontend lo chiama dopo il login)
+    Route::get('/user', [UserController::class, 'me']);
 
     // Consultazione: tutti gli utenti autenticati possono vedere le risorse.
     // Il nome {bookable} deve coincidere con il parametro $bookable del controller,
@@ -47,12 +44,43 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/bookables/{bookable}/availabilities', [AvailabilityController::class, 'store']);
         Route::delete('/availabilities/{availability}', [AvailabilityController::class, 'destroy']);
 
+        // Corsi: creazione, modifica, eliminazione e assegnazione degli istruttori
+        Route::post('/courses', [CourseController::class, 'store']);
+        Route::put('/courses/{course}', [CourseController::class, 'update']);
+        Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+        Route::put('/courses/{course}/instructors/{user}', [CourseInstructorController::class, 'store']);
+        Route::delete('/courses/{course}/instructors/{user}', [CourseInstructorController::class, 'destroy']);
+
+        // Piani di abbonamento: gestione
+        Route::post('/subscription-plans', [SubscriptionPlanController::class, 'store']);
+        Route::put('/subscription-plans/{subscriptionPlan}', [SubscriptionPlanController::class, 'update']);
+        Route::delete('/subscription-plans/{subscriptionPlan}', [SubscriptionPlanController::class, 'destroy']);
+
+        // Utenti e abbonamenti: elenco utenti, abbonamenti di un utente, assegnazione e annullamento
+        Route::get('/users', [UserController::class, 'index']);
+        Route::get('/users/{user}/subscriptions', [UserSubscriptionController::class, 'index']);
+        Route::post('/users/{user}/subscriptions', [UserSubscriptionController::class, 'store']);
+        Route::delete('/subscriptions/{subscription}', [SubscriptionController::class, 'destroy']);
     });
 
-      
+    // Corsi: li consultano tutti gli utenti autenticati
+    Route::get('/courses', [CourseController::class, 'index']);
+    Route::get('/courses/{course}', [CourseController::class, 'show']);
 
-      
+    // Iscritti a un corso: solo admin e istruttori di quel corso (lo decide CoursePolicy nel controller)
+    Route::get('/courses/{course}/students', [CourseStudentController::class, 'index']);
 
+    // La mia iscrizione a un corso: iscriversi e annullare
+    Route::post('/courses/{course}/enrollment', [EnrollmentController::class, 'store']);
+    Route::delete('/courses/{course}/enrollment', [EnrollmentController::class, 'destroy']);
+
+    // Piani di abbonamento: li consultano tutti (per sapere cosa esiste)
+    Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index']);
+
+    // Le mie cose: corsi a cui sono iscritto, corsi che insegno, il mio abbonamento
+    Route::get('/me/courses', [MeController::class, 'courses']);
+    Route::get('/me/teaching', [MeController::class, 'teaching']);
+    Route::get('/me/subscription', [MeController::class, 'subscription']);
 
     // Slot liberi di una risorsa per un giorno: ?date=AAAA-MM-GG
     Route::get('/bookables/{bookable}/slots', [BookableController::class, 'slots']);
@@ -61,6 +89,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy']);
-
-
 });

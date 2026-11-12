@@ -9,7 +9,7 @@ class IndexBookableRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // l'accesso è già limitato da auth:sanctum
+        return true; // l'accesso è già limitato da autenticazione Keycloak (JWT)
     }
 
     public function rules(): array

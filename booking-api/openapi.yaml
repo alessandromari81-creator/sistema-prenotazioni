@@ -1,184 +1,88 @@
 openapi: 3.0.3
 
 info:
-  title: Sistema di prenotazioni - API
-  version: 1.0.0
+  title: Palestra - API
+  version: 2.0.0
   description: |
-    API REST del sistema di prenotazioni (Laravel 13, Sanctum in modalità SPA).
+    API REST dell'applicazione della palestra (Laravel 13): corsi, istruttori, abbonamenti, iscrizioni e prenotazione
+    di sale e slot.
 
     ## Autenticazione
-    Non ci sono token Bearer: il browser tiene un **cookie di sessione**. Per le chiamate di scrittura (`POST`,
-    `PUT`, `DELETE`) serve anche la protezione CSRF:
+    Login, registrazione e password le gestisce **Keycloak**. L'API non ha rotte di login: ogni richiesta deve portare
+    il JWT rilasciato da Keycloak nell'header
 
-    1. `GET /sanctum/csrf-cookie` imposta il cookie `XSRF-TOKEN` (e la sessione).
-    2. Ogni richiesta successiva rimanda il valore di quel cookie nell'header `X-XSRF-TOKEN`.
-    3. `POST /api/login` apre la sessione; da quel momento le rotte protette rispondono.
+    ```
+    Authorization: Bearer <access token>
+    ```
 
-    La richiesta deve arrivare da un dominio "stateful" (`SANCTUM_STATEFUL_DOMAINS`): il frontend lo garantisce
-    mandando `Origin` o `Referer`.
+    Il frontend ottiene il token con il flusso *Authorization Code + PKCE*. In Swagger UI si usa il pulsante
+    **Authorize**: porta al login di Keycloak e poi "Try it out" funziona; in alternativa si incolla un token a mano.
+    Un token è accettato solo se la firma è valida, non è scaduto, l'emittente (`iss`) è il nostro realm e il
+    destinatario (`aud`) è `palestra-api`.
+
+    Il profilo applicativo dell'utente nasce al primo accesso: l'identità è in Keycloak (claim `sub`), i dati
+    dell'applicazione in Laravel. Il ruolo `admin` arriva dal token (ruolo del realm).
+
+    **Utenti di prova** (password `password`): `admin@example.com` (admin), `luca.verdi@example.com` e
+    `sara.neri@example.com` (istruttori), `mario.rossi@example.com` (ha un abbonamento) e `anna.bianchi@example.com`
+    (non ne ha uno).
+
+    ## Ruoli
+    - **Utente**: consulta corsi e piani, si iscrive e annulla la propria iscrizione, prenota sale.
+    - **Istruttore**: non è un ruolo globale ma un'assegnazione a un corso. Vede gli iscritti dei corsi che insegna.
+      Può essere studente di un altro corso, ma **mai** istruttore e studente dello stesso corso.
+    - **Admin**: gestisce corsi, istruttori, piani e abbonamenti, risorse e fasce orarie.
 
     ## Errori comuni
-    - `401` non autenticato: `{"message": "Non autenticato."}`
-    - `403` permesso negato (rotta riservata agli admin o prenotazione altrui)
+    - `401` token mancante, scaduto o non valido: `{"message": "Non autenticato."}`
+    - `403` permesso negato (rotta per soli admin, elenco iscritti di un corso altrui, prenotazione altrui)
     - `404` risorsa inesistente
     - `422` validazione fallita, con l'elenco `errors` per campo (anche per le regole di business)
-    - `429` troppe richieste, con `retry_after` in secondi e header `Retry-After`
+    - `429` troppe richieste (120 al minuto per utente), con `retry_after` in secondi e header `Retry-After`
 
     ## Date e orari
-    Gli istanti delle prenotazioni sono in **UTC** (ISO 8601). Le fasce orarie (`day_of_week`, `start_time`,
-    `end_time`) sono invece nell'orario di Roma. `day_of_week`: 1 = lunedì ... 7 = domenica.
+    Gli istanti delle prenotazioni sono in **UTC** (ISO 8601). Le fasce orarie delle risorse e l'orario dei corsi
+    sono nell'orario di Roma. `day_of_week`: 1 = lunedì ... 7 = domenica. Le date degli abbonamenti sono giorni
+    (`AAAA-MM-GG`, estremi inclusi).
 
     Questo file è scritto a mano: va aggiornato insieme al codice (`routes/api.php`, Form Request, Resource).
 
 servers:
   - url: http://localhost:8080
-    description: Demo con Docker (nginx inoltra /api e /sanctum al backend)
+    description: Demo con Docker (nginx inoltra /api al backend)
   - url: http://localhost:4200
     description: Sviluppo (ng serve con proxy.conf.json)
 
 tags:
-  - name: Autenticazione
-    description: Registrazione in due passi, login, logout, utente corrente
+  - name: Utenti
+    description: Profilo dell'utente autenticato ed elenco utenti (admin)
+  - name: Corsi
+    description: I corsi della palestra. Consultazione per tutti, gestione per gli admin
+  - name: Istruttori
+    description: Assegnazione degli istruttori ai corsi (admin) ed elenco degli iscritti
+  - name: Iscrizioni
+    description: Iscriversi a un corso e vedere le proprie iscrizioni
+  - name: Abbonamenti
+    description: Piani di abbonamento e abbonamenti assegnati agli utenti
   - name: Risorse
     description: Risorse prenotabili (sale, campi...). Scrittura solo per gli admin
   - name: Fasce orarie
     description: Quando una risorsa è prenotabile. Solo admin
   - name: Prenotazioni
-    description: Slot liberi, elenco, creazione e annullamento
+    description: Slot liberi, elenco, creazione e annullamento delle prenotazioni di risorse
 
 security:
-  - sessionCookie: []
+  - keycloak: [openid, profile, email]
+  - bearerAuth: []
 
 paths:
-  /sanctum/csrf-cookie:
-    get:
-      tags: [Autenticazione]
-      summary: Imposta il cookie CSRF
-      description: Da chiamare prima di ogni scrittura. Risponde 204 e imposta `XSRF-TOKEN` e la sessione.
-      security: []
-      responses:
-        '204':
-          description: Cookie impostati.
-
-  /api/register:
-    post:
-      tags: [Autenticazione]
-      summary: Registrazione, passo 1
-      description: |
-        Salva i dati in `pending_registrations` (password già hashata) e mette in coda la mail con il link di
-        conferma. **Risponde sempre 202**, anche se l'email è già iscritta, per non rivelare chi è registrato.
-        Se la stessa email si registra più volte vince l'ultima richiesta e i link precedenti smettono di
-        funzionare. Serve il worker delle code, altrimenti la mail non parte.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '202':
-          description: Richiesta accolta (sempre la stessa risposta).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Message'
-              example:
-                message: "Controlla la tua email: se l'indirizzo è valido riceverai il link per confermare la registrazione."
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /api/register/confirm:
-    post:
-      tags: [Autenticazione]
-      summary: Registrazione, passo 2 (conferma)
-      description: |
-        Chiamata dalla pagina del frontend raggiunta dal link nella mail. Se il token è quello dell'ultima mail
-        e non è scaduto crea l'utente (email già verificata). È una POST e non un link diretto all'API, così
-        antivirus e anteprime delle mail non consumano il token.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConfirmRegistrationRequest'
-      responses:
-        '201':
-          description: Utente creato.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Message'
-              example:
-                message: Registrazione confermata. Ora puoi effettuare il login.
-        '410':
-          description: Link non valido, scaduto o sostituito da una richiesta più recente.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Message'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /api/login:
-    post:
-      tags: [Autenticazione]
-      summary: Login
-      description: Verifica le credenziali e apre la sessione (cookie). Limite di richieste per IP e per coppia email + IP.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Sessione aperta. Restituisce l'utente.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '403':
-          description: Email non ancora verificata.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Message'
-        '422':
-          description: Credenziali non valide (`errors.email`) o dati mancanti.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-              example:
-                message: Credenziali non valide.
-                errors:
-                  email: [Credenziali non valide.]
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /api/logout:
-    post:
-      tags: [Autenticazione]
-      summary: Logout
-      description: Chiude e invalida la sessione e rigenera il token CSRF.
-      responses:
-        '204':
-          description: Sessione chiusa.
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-
   /api/user:
     get:
-      tags: [Autenticazione]
+      tags: [Utenti]
       summary: Utente autenticato
-      description: Il frontend la chiama all'avvio per sapere se la sessione è valida.
+      description: |
+        Il profilo di chi ha il token. Il frontend la chiama dopo il login. Al primo accesso il profilo viene creato
+        da Laravel (stato comunque 200). `teaches_courses` dice se l'utente insegna in almeno un corso.
       responses:
         '200':
           description: L'utente corrente.
@@ -470,17 +374,518 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /api/users:
+    get:
+      tags: [Utenti]
+      summary: Elenco degli utenti (admin)
+      description: |
+        Serve all'admin per scegliere chi assegnare come istruttore o a chi dare un abbonamento. Compaiono solo gli
+        utenti che hanno già fatto almeno un accesso, perché i profili nascono al primo login.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+        - name: search
+          in: query
+          description: Cerca nel nome o nell'email (senza distinguere maiuscole).
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: Pagina di utenti.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/users/{user}/subscriptions:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Abbonamenti]
+      summary: Abbonamenti di un utente (admin)
+      description: Dal più recente al più vecchio, con il piano.
+      responses:
+        '200':
+          description: Gli abbonamenti dell'utente.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subscription'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Abbonamenti]
+      summary: Assegna un piano a un utente (admin)
+      description: |
+        La fine si calcola dalla durata del piano ed è inclusa: 30 giorni da oggi finiscono il ventinovesimo giorno
+        dopo oggi. Rifiutato (422) se il piano è disattivato o se il periodo si sovrappone a un altro abbonamento
+        dell'utente (anche futuro). Un abbonamento annullato non blocca.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreSubscriptionRequest'
+      responses:
+        '201':
+          description: Abbonamento assegnato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/subscriptions/{subscription}:
+    delete:
+      tags: [Abbonamenti]
+      summary: Annulla un abbonamento (admin)
+      description: |
+        Non lo cancella: salva quando è stato annullato. Le iscrizioni già fatte restano valide, perché
+        l'abbonamento serve per iscriversi. Risponde 422 se è già annullato.
+      parameters:
+        - name: subscription
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: L'abbonamento annullato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/subscription-plans:
+    get:
+      tags: [Abbonamenti]
+      summary: Elenco dei piani di abbonamento
+      description: Dal più breve al più lungo. Di default solo i piani attivi; l'admin può chiedere anche gli altri con `all=1`.
+      parameters:
+        - name: all
+          in: query
+          description: Se `1` e l'utente è admin, include i piani disattivati. Per gli altri è ignorato.
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: I piani.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionPlan'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags: [Abbonamenti]
+      summary: Crea un piano (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreSubscriptionPlanRequest'
+      responses:
+        '201':
+          description: Piano creato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlan'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/subscription-plans/{subscriptionPlan}:
+    parameters:
+      - name: subscriptionPlan
+        in: path
+        required: true
+        schema: { type: integer }
+    put:
+      tags: [Abbonamenti]
+      summary: Modifica un piano (admin)
+      description: Si può inviare anche un solo campo. Gli abbonamenti già assegnati non cambiano.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubscriptionPlanRequest'
+      responses:
+        '200':
+          description: Il piano aggiornato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlan'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Abbonamenti]
+      summary: Elimina un piano (admin)
+      description: 'Rifiutato (422) se il piano è già stato assegnato a degli utenti: va disattivato, così lo storico resta leggibile.'
+      responses:
+        '204':
+          description: Eliminato.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/courses:
+    get:
+      tags: [Corsi]
+      summary: Elenco dei corsi
+      description: |
+        Paginato, con istruttori, sala, numero di iscritti, posti liberi e due informazioni su chi guarda:
+        `is_enrolled` (sono iscritto?) e `is_instructor` (sono istruttore?). Di default solo i corsi attivi;
+        l'admin può chiedere anche gli altri con `all=1`.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [name, day_of_week, start_time], default: day_of_week }
+        - $ref: '#/components/parameters/SortDirection'
+        - name: search
+          in: query
+          description: Cerca nel nome (contiene, senza distinguere maiuscole).
+          schema: { type: string, maxLength: 100 }
+        - name: day_of_week
+          in: query
+          description: Mostra solo i corsi di quel giorno (1 = lunedì ... 7 = domenica).
+          schema: { type: integer, minimum: 1, maximum: 7 }
+        - name: all
+          in: query
+          description: Se `1` e l'utente è admin, include i corsi disattivati. Per gli altri è ignorato.
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Pagina di corsi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoursePage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [Corsi]
+      summary: Crea un corso (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreCourseRequest'
+      responses:
+        '201':
+          description: Corso creato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/courses/{course}:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    get:
+      tags: [Corsi]
+      summary: Dettaglio di un corso
+      description: 'Un corso disattivato lo vedono solo gli admin: per gli altri risponde 404.'
+      responses:
+        '200':
+          description: Il corso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Corsi]
+      summary: Modifica un corso (admin)
+      description: Si può inviare anche un solo campo. I posti non possono scendere sotto il numero degli iscritti attuali (422).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCourseRequest'
+      responses:
+        '200':
+          description: Il corso aggiornato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Corsi]
+      summary: Elimina un corso (admin)
+      description: 'Rifiutato (422) se ha iscritti attivi: va disattivato. Con il corso spariscono le assegnazioni degli istruttori.'
+      responses:
+        '204':
+          description: Eliminato.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/courses/{course}/instructors/{user}:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+      - $ref: '#/components/parameters/UserId'
+    put:
+      tags: [Istruttori]
+      summary: Assegna un istruttore al corso (admin)
+      description: |
+        Ripetere la chiamata non ha effetto. **Regola**: se l'utente è iscritto al corso come studente, la risposta è
+        422 (`errors.user_id`): non si può essere istruttore e studente dello stesso corso. Un istruttore può invece
+        essere studente di un altro corso.
+      responses:
+        '200':
+          description: Il corso con l'elenco aggiornato degli istruttori.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Istruttori]
+      summary: Toglie un istruttore dal corso (admin)
+      responses:
+        '200':
+          description: Il corso con l'elenco aggiornato degli istruttori.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/courses/{course}/students:
+    get:
+      tags: [Istruttori]
+      summary: Iscritti a un corso
+      description: |
+        Gli studenti con iscrizione valida, con nome ed email. Li vedono solo gli admin e gli istruttori di quel corso;
+        per tutti gli altri (compresi gli istruttori di altri corsi) la risposta è 403.
+      parameters:
+        - $ref: '#/components/parameters/CourseId'
+      responses:
+        '200':
+          description: Le iscrizioni valide, dalla più vecchia.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Enrollment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/courses/{course}/enrollment:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    post:
+      tags: [Iscrizioni]
+      summary: Iscriviti al corso
+      description: |
+        Regole, nell'ordine: il corso è attivo; non sei istruttore di quel corso; non sei già iscritto; hai un
+        abbonamento attivo; non superi il numero di corsi del piano; il corso ha posti liberi. Se una regola non è
+        rispettata la risposta è 422 con il messaggio nel campo `course` o `subscription`. Un'iscrizione annullata
+        in precedenza viene riattivata.
+      responses:
+        '201':
+          description: Iscrizione creata, con il corso aggiornato (iscritti, posti liberi).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Iscrizioni]
+      summary: Annulla la tua iscrizione al corso
+      description: La riga resta con stato `cancelled` e il posto torna libero. 422 se non sei iscritto.
+      responses:
+        '200':
+          description: L'iscrizione annullata, con il corso aggiornato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/me/courses:
+    get:
+      tags: [Iscrizioni]
+      summary: I corsi a cui sono iscritto
+      description: Solo le iscrizioni valide, in ordine di giorno e ora.
+      responses:
+        '200':
+          description: I corsi.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /api/me/teaching:
+    get:
+      tags: [Istruttori]
+      summary: I corsi che insegno
+      description: Vuoto se l'utente non è istruttore di nessun corso.
+      responses:
+        '200':
+          description: I corsi.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /api/me/subscription:
+    get:
+      tags: [Abbonamenti]
+      summary: Il mio abbonamento
+      description: L'abbonamento attivo (oppure `null`), quanti corsi sto seguendo e quanti ne posso ancora seguire.
+      responses:
+        '200':
+          description: Il riepilogo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionUsage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
 components:
   securitySchemes:
-    sessionCookie:
-      type: apiKey
-      in: cookie
-      name: laravel_session
-      description: |
-        Cookie di sessione impostato dal login. Il nome reale dipende da `APP_NAME` (di solito
-        `<nome-app>-session`). Le scritture richiedono anche l'header `X-XSRF-TOKEN`.
+    keycloak:
+      type: oauth2
+      description: Login con Keycloak (Authorization Code + PKCE). Il pulsante Authorize porta alla pagina di accesso.
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:8180/realms/palestra/protocol/openid-connect/auth
+          tokenUrl: http://localhost:8180/realms/palestra/protocol/openid-connect/token
+          scopes:
+            openid: Identità dell'utente
+            profile: Nome e cognome
+            email: Indirizzo email
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: In alternativa, incolla qui un access token ottenuto da Keycloak.
 
   parameters:
+    CourseId:
+      name: course
+      in: path
+      required: true
+      schema: { type: integer }
+    UserId:
+      name: user
+      in: path
+      required: true
+      description: Identificativo dell'utente in Laravel (non quello di Keycloak).
+      schema: { type: integer }
     BookableId:
       name: bookable
       in: path
@@ -497,7 +902,7 @@ components:
 
   responses:
     Unauthenticated:
-      description: Non autenticato.
+      description: Token mancante, scaduto o non valido.
       content:
         application/json:
           schema:
@@ -505,7 +910,7 @@ components:
           example:
             message: Non autenticato.
     Forbidden:
-      description: Permesso negato (rotta per soli admin o prenotazione di un altro utente).
+      description: Permesso negato (rotta per soli admin, elenco iscritti di un corso altrui o prenotazione di un altro utente).
       content:
         application/json:
           schema:
@@ -561,7 +966,7 @@ components:
       type: object
       properties:
         message: { type: string }
-        retry_after: { type: integer, description: Secondi da attendere. }
+        retry_after: { type: integer, description: 'Secondi da attendere.' }
 
     User:
       type: object
@@ -570,14 +975,15 @@ components:
         name: { type: string }
         email: { type: string, format: email }
         address: { type: string, nullable: true }
-        role: { type: string, enum: [user, admin] }
+        role: { type: string, enum: [user, admin], description: 'Copia del ruolo dichiarato dal token di Keycloak.' }
+        teaches_courses: { type: boolean, description: 'Presente solo in GET /api/user. Vero se l''utente insegna in almeno un corso.' }
 
     Availability:
       type: object
       properties:
         id: { type: integer }
         bookable_id: { type: integer }
-        day_of_week: { type: integer, minimum: 1, maximum: 7, description: 1 = lunedì ... 7 = domenica }
+        day_of_week: { type: integer, minimum: 1, maximum: 7, description: '1 = lunedì ... 7 = domenica' }
         start_time: { type: string, example: '09:00:00', description: 'Orario di Roma (HH:MM:SS).' }
         end_time: { type: string, example: '13:00:00', description: 'Orario di Roma (HH:MM:SS).' }
         created_at: { type: string, format: date-time, nullable: true }
@@ -589,7 +995,7 @@ components:
         id: { type: integer }
         name: { type: string }
         description: { type: string, nullable: true }
-        slot_minutes: { type: integer, description: Durata di uno slot in minuti. }
+        slot_minutes: { type: integer, description: 'Durata di uno slot in minuti.' }
         is_active: { type: boolean }
         availabilities:
           type: array
@@ -605,8 +1011,8 @@ components:
         id: { type: integer }
         user_id: { type: integer }
         bookable_id: { type: integer }
-        starts_at: { type: string, format: date-time, description: Inizio in UTC. }
-        ends_at: { type: string, format: date-time, description: Fine in UTC. }
+        starts_at: { type: string, format: date-time, description: 'Inizio in UTC.' }
+        ends_at: { type: string, format: date-time, description: 'Fine in UTC.' }
         status: { type: string, enum: [confirmed, cancelled] }
         notes: { type: string, nullable: true }
         bookable:
@@ -673,29 +1079,6 @@ components:
               items:
                 $ref: '#/components/schemas/Booking'
 
-    RegisterRequest:
-      type: object
-      required: [name, email, password, address]
-      properties:
-        name: { type: string, maxLength: 255 }
-        email: { type: string, format: email, maxLength: 255 }
-        password: { type: string, format: password, minLength: 8, maxLength: 255 }
-        address: { type: string, maxLength: 255 }
-
-    ConfirmRegistrationRequest:
-      type: object
-      required: [email, token]
-      properties:
-        email: { type: string, format: email, maxLength: 255 }
-        token: { type: string, minLength: 64, maxLength: 64, description: Token ricevuto nel link della mail. }
-
-    LoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email: { type: string, format: email }
-        password: { type: string, format: password }
-
     StoreBookableRequest:
       type: object
       required: [name, slot_minutes]
@@ -728,3 +1111,171 @@ components:
       properties:
         bookable_id: { type: integer }
         starts_at: { type: string, format: date-time, description: 'Inizio dello slot (UTC), nel futuro.' }
+
+    UserPage:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    Instructor:
+      type: object
+      description: Un istruttore come lo vedono gli altri utenti. Niente email né dati personali.
+      properties:
+        id: { type: integer }
+        name: { type: string }
+
+    Student:
+      type: object
+      description: Uno studente come lo vedono admin e istruttori del corso.
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+
+    Course:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        capacity: { type: integer, description: 'Posti disponibili.' }
+        day_of_week: { type: integer, minimum: 1, maximum: 7, description: '1 = lunedì ... 7 = domenica' }
+        start_time: { type: string, example: '18:30:00', description: 'Ora di inizio (orario di Roma).' }
+        duration_minutes: { type: integer }
+        is_active: { type: boolean }
+        bookable_id: { type: integer, nullable: true }
+        bookable:
+          description: La sala, se il corso ne indica una.
+          allOf:
+            - $ref: '#/components/schemas/Bookable'
+        instructors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Instructor'
+        enrolled_count: { type: integer, description: 'Iscritti con iscrizione valida.' }
+        spots_left: { type: integer, description: 'Posti ancora liberi (mai negativo).' }
+        is_enrolled: { type: boolean, description: 'Vero se chi guarda è iscritto al corso.' }
+        is_instructor: { type: boolean, description: 'Vero se chi guarda è istruttore del corso.' }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    CoursePage:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Course'
+
+    Enrollment:
+      type: object
+      properties:
+        id: { type: integer }
+        course_id: { type: integer }
+        user_id: { type: integer }
+        status: { type: string, enum: [active, cancelled] }
+        course:
+          description: Presente quando l'iscrizione viene creata o annullata.
+          allOf:
+            - $ref: '#/components/schemas/Course'
+        student:
+          description: Presente nell'elenco degli iscritti di un corso.
+          allOf:
+            - $ref: '#/components/schemas/Student'
+        created_at: { type: string, format: date-time, nullable: true }
+
+    SubscriptionPlan:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        duration_days: { type: integer }
+        max_courses: { type: integer, description: 'Corsi seguibili contemporaneamente.' }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    Subscription:
+      type: object
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        subscription_plan_id: { type: integer }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date, description: 'Ultimo giorno di validità, incluso.' }
+        cancelled_at: { type: string, format: date-time, nullable: true }
+        is_active: { type: boolean, description: 'Vero se non è annullato e oggi è compreso nel periodo.' }
+        plan:
+          $ref: '#/components/schemas/SubscriptionPlan'
+        created_at: { type: string, format: date-time, nullable: true }
+
+    SubscriptionUsage:
+      type: object
+      properties:
+        subscription:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Subscription'
+        courses_used: { type: integer, description: 'Iscrizioni valide dell''utente.' }
+        courses_left: { type: integer, description: 'Corsi ancora seguibili (0 senza abbonamento attivo).' }
+
+    StoreCourseRequest:
+      type: object
+      required: [name, capacity, day_of_week, start_time, duration_minutes]
+      properties:
+        name: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true, maxLength: 2000 }
+        capacity: { type: integer, minimum: 1, maximum: 200 }
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        start_time: { type: string, example: '18:30', description: 'Formato HH:MM.' }
+        duration_minutes: { type: integer, minimum: 15, maximum: 240 }
+        bookable_id: { type: integer, nullable: true, description: 'La sala (una risorsa esistente).' }
+        is_active: { type: boolean, default: true }
+
+    UpdateCourseRequest:
+      type: object
+      description: Tutti i campi sono facoltativi.
+      properties:
+        name: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true, maxLength: 2000 }
+        capacity: { type: integer, minimum: 1, maximum: 200 }
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        start_time: { type: string, example: '18:30', description: 'Formato HH:MM.' }
+        duration_minutes: { type: integer, minimum: 15, maximum: 240 }
+        bookable_id: { type: integer, nullable: true }
+        is_active: { type: boolean }
+
+    StoreSubscriptionPlanRequest:
+      type: object
+      required: [name, duration_days, max_courses]
+      properties:
+        name: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true, maxLength: 2000 }
+        duration_days: { type: integer, minimum: 1, maximum: 1095 }
+        max_courses: { type: integer, minimum: 1, maximum: 50 }
+        is_active: { type: boolean, default: true }
+
+    UpdateSubscriptionPlanRequest:
+      type: object
+      description: Tutti i campi sono facoltativi.
+      properties:
+        name: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true, maxLength: 2000 }
+        duration_days: { type: integer, minimum: 1, maximum: 1095 }
+        max_courses: { type: integer, minimum: 1, maximum: 50 }
+        is_active: { type: boolean }
+
+    StoreSubscriptionRequest:
+      type: object
+      required: [subscription_plan_id]
+      properties:
+        subscription_plan_id: { type: integer, description: 'Un piano attivo.' }
+        starts_on: { type: string, format: date, nullable: true, description: 'Giorno di inizio, da oggi in poi. Se manca, oggi.' }

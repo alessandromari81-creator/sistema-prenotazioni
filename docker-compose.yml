@@ -1,13 +1,18 @@
 # Avvio dell'intera applicazione per provarla:   docker compose up --build
 #   Frontend:  http://localhost:8080      Email di prova (Mailpit):  http://localhost:8025
 #   Documentazione API (Swagger UI):  http://localhost:8081
+#   Login e utenti (Keycloak):  http://localhost:8180  (console: admin / admin)
 #   Database (DBeaver, psql):  localhost:5433, database/utente/password "booking"
 #
-# Le porte si cambiano con le variabili WEB_PORT, MAILPIT_PORT, SWAGGER_PORT e DB_PORT, ad esempio:
+# Le porte si cambiano con WEB_PORT, MAILPIT_PORT, SWAGGER_PORT, DB_PORT e KEYCLOAK_PORT, ad esempio:
 #   WEB_PORT=9090 docker compose up --build
 #
-# ATTENZIONE: la chiave dell'app e la password del database qui sotto, e l'admin creato dal seeder
-# (admin@example.com / password), sono solo per la demo locale: non usarli altrove.
+# Utenti di prova (creati da Keycloak, password "password"): admin@example.com (admin), luca.verdi@example.com e
+# sara.neri@example.com (istruttori), mario.rossi@example.com e anna.bianchi@example.com (studenti).
+# Se cambi WEB_PORT o SWAGGER_PORT va aggiornato anche l'elenco degli indirizzi di ritorno in keycloak/palestra-realm.json.
+#
+# ATTENZIONE: la chiave dell'app, le password del database e di Keycloak qui sotto, e gli utenti di prova,
+# sono solo per la demo locale: non usarli altrove.
 
 name: sistema-prenotazioni
 
@@ -21,8 +26,11 @@ x-api: &api
     APP_KEY: ${APP_KEY:-base64:vhl9OuydSSqOasEqR4x5eKYXvwlIaO/cqg7+Y3ZrPbk=}
     APP_TIMEZONE: Europe/Rome
     APP_URL: http://localhost:${WEB_PORT:-8080}
-    FRONTEND_URL: http://localhost:${WEB_PORT:-8080}
-    SANCTUM_STATEFUL_DOMAINS: localhost:${WEB_PORT:-8080}
+    # Keycloak: l'emittente è l'indirizzo che vede il browser, le chiavi si scaricano dalla rete interna di Docker
+    KEYCLOAK_ISSUER: http://localhost:${KEYCLOAK_PORT:-8180}/realms/palestra
+    KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/palestra/protocol/openid-connect/certs
+    KEYCLOAK_AUDIENCE: palestra-api
+    KEYCLOAK_ADMIN_ROLE: admin
     LOG_CHANNEL: stderr
     DB_CONNECTION: pgsql
     DB_HOST: db
@@ -58,6 +66,30 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # Keycloak: gestisce login, registrazione e password, e rilascia il JWT che il frontend manda all'API.
+  # Importa al primo avvio il realm "palestra" (ruoli, client, utenti di prova) da keycloak/palestra-realm.json.
+  # Console di amministrazione: http://localhost:8180 (admin / admin, solo per la demo).
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: "false"      # l'indirizzo dell'emittente segue quello usato dal browser
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    volumes:
+      - ./keycloak/palestra-realm.json:/opt/keycloak/data/import/palestra-realm.json:ro
+      - keycloak-data:/opt/keycloak/data   # il database interno di Keycloak: utenti registrati e sessioni restano
+    healthcheck:
+      # L'immagine non ha curl: si apre una connessione TCP alla porta di gestione e si legge lo stato
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 
   # Casella di posta finta: qui si leggono le email di conferma della registrazione
   mailpit:
@@ -111,13 +143,16 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Documentazione dell'API (Swagger UI) generata da booking-api/openapi.yaml, solo da leggere:
-  # il pulsante "Try it out" non funziona perché il cookie di sessione non passa tra porte diverse
+  # Documentazione dell'API (Swagger UI) generata da booking-api/openapi.yaml.
+  # Si usa con il token di Keycloak: "Authorize" fa il login e poi si possono provare le chiamate
   swagger:
     image: swaggerapi/swagger-ui:latest
     environment:
       SWAGGER_JSON: /spec/openapi.yaml
-      SUPPORTED_SUBMIT_METHODS: "[]"
+      # "Authorize" porta al login di Keycloak (client pubblico "palestra-swagger", PKCE): poi "Try it out" funziona
+      OAUTH_CLIENT_ID: palestra-swagger
+      OAUTH_USE_PKCE: "true"
+      OAUTH_SCOPES: "openid profile email"
     volumes:
       - ./booking-api/openapi.yaml:/spec/openapi.yaml:ro
     ports:
@@ -135,3 +170,4 @@ services:
 
 volumes:
   db-data:
+  keycloak-data:

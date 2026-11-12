@@ -10,7 +10,6 @@ use App\Notifications\BookingConfirmed;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class BookingApiTest extends TestCase
@@ -38,7 +37,7 @@ class BookingApiTest extends TestCase
     private function loginAsUser(): User
     {
         $user = User::factory()->create(['role' => 'user']);
-        Sanctum::actingAs($user, ['*']);
+        $this->actingAs($user);
         return $user;
     }
 
@@ -46,7 +45,7 @@ class BookingApiTest extends TestCase
     private function loginAsAdmin(): User
     {
         $admin = User::where('email', 'admin@example.com')->firstOrFail();
-        Sanctum::actingAs($admin, ['*']);
+        $this->actingAs($admin);
         return $admin;
     }
 

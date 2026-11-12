@@ -15,15 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Indica dove mandare gli utenti non autenticati. Per gli indirizzi "api/*"
-        // restituisce null (nessun redirect), così Laravel non cerca più la rotta
-        // "login", che nel nostro progetto non esiste. Per il resto del sito
-        // mantiene il comportamento normale
-        $middleware->redirectGuestsTo(
-            fn (Request $request) => $request->is('api/*') ? null : route('login')
-        );
-
-        $middleware->statefulApi();
+        // Gli utenti non autenticati non vengono mai rimandati a una pagina di login: l'API risponde 401
+        // e il login lo fa il frontend con Keycloak.
+        $middleware->redirectGuestsTo(fn (Request $request) => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Per le rotte "api/*" un utente non autenticato riceve sempre un 401 in JSON,

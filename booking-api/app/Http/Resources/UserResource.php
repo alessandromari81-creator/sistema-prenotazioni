@@ -22,6 +22,8 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'address' => $this->address,
             'role' => $this->role,
+            // Presente solo nella risposta di GET /api/user: dice se l'utente insegna in almeno un corso
+            'teaches_courses' => $this->whenHas('teaches_courses', fn ($value) => (bool) $value),
         ];
     }
 }

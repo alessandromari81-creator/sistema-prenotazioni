@@ -6,7 +6,6 @@ use App\Models\Bookable;
 use App\Models\Booking;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ApiResourcesTest extends TestCase
@@ -15,7 +14,7 @@ class ApiResourcesTest extends TestCase
 
     public function test_user_endpoint_exposes_only_whitelisted_fields(): void
     {
-        Sanctum::actingAs(User::factory()->create(['address' => 'Via Roma 1']), ['*']);
+        $this->actingAs(User::factory()->create(['address' => 'Via Roma 1']));
 
         $this->getJson('/api/user')
             ->assertOk()
@@ -29,7 +28,7 @@ class ApiResourcesTest extends TestCase
     {
         $user = User::factory()->create();
         Booking::factory()->create(['user_id' => $user->id]);
-        Sanctum::actingAs($user, ['*']);
+        $this->actingAs($user);
 
         // Il frontend legge current_page, total, ...: la forma del paginatore non deve cambiare
         $this->getJson('/api/bookings')
@@ -44,7 +43,7 @@ class ApiResourcesTest extends TestCase
     public function test_bookable_without_loaded_relation_omits_availabilities(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        Sanctum::actingAs($admin, ['*']);
+        $this->actingAs($admin);
 
         // Dopo la creazione la relazione non è caricata: il campo non deve comparire
         $this->postJson('/api/bookables', ['name' => 'Sala', 'slot_minutes' => 30])

@@ -1,0 +1,190 @@
+{
+  "realm": "palestra",
+  "displayName": "Palestra",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": true,
+  "rememberMe": true,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "it",
+    "en"
+  ],
+  "defaultLocale": "it",
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "noreply@palestra.local",
+    "fromDisplayName": "Palestra",
+    "auth": "false",
+    "ssl": "false",
+    "starttls": "false"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Amministratore della palestra: gestisce corsi, istruttori e abbonamenti"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "palestra-spa",
+      "name": "Palestra - frontend Angular",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8080/*",
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8080",
+        "http://localhost:4200"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/*##http://localhost:4200/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-palestra-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "palestra-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "palestra-swagger",
+      "name": "Palestra - Swagger UI",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8081/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8081"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-palestra-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "palestra-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "username": "admin@example.com",
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "Palestra",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "username": "luca.verdi@example.com",
+      "email": "luca.verdi@example.com",
+      "firstName": "Luca",
+      "lastName": "Verdi",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "username": "sara.neri@example.com",
+      "email": "sara.neri@example.com",
+      "firstName": "Sara",
+      "lastName": "Neri",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "username": "mario.rossi@example.com",
+      "email": "mario.rossi@example.com",
+      "firstName": "Mario",
+      "lastName": "Rossi",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "username": "anna.bianchi@example.com",
+      "email": "anna.bianchi@example.com",
+      "firstName": "Anna",
+      "lastName": "Bianchi",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

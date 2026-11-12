@@ -16,7 +16,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard' => env('AUTH_GUARD', 'keycloak'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
@@ -38,8 +38,9 @@ return [
     */
 
     'guards' => [
-        'web' => [
-            'driver' => 'session',
+        // Autenticazione dal JWT di Keycloak (vedi Auth::viaRequest in AppServiceProvider)
+        'keycloak' => [
+            'driver' => 'keycloak',
             'provider' => 'users',
         ],
     ],
