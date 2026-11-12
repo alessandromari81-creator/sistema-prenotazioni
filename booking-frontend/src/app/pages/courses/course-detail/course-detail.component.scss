@@ -1,0 +1,8 @@
+/* La copertina del corso come striscione in cima alla pagina: più larga che alta, angoli arrotondati */
+.detail-cover {
+  aspect-ratio: 21 / 8;
+  max-height: 280px;
+  width: 100%;
+  border-radius: 16px;
+  margin-bottom: 1.25rem;
+}

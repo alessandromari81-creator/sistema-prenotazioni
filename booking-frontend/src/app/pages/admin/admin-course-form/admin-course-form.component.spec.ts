@@ -17,10 +17,16 @@ describe('AdminCourseFormComponent', () => {
     notify.error.mockReset();
   });
 
-  let api: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
+  let api: {
+    create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>;
+    uploadImage: ReturnType<typeof vi.fn>; removeImage: ReturnType<typeof vi.fn>;
+  };
 
   async function render(id: string | null = null) {
-    api = { create: vi.fn().mockReturnValue(of({})), update: vi.fn().mockReturnValue(of({})), get: vi.fn() };
+    api = {
+      create: vi.fn().mockReturnValue(of({ id: 9 })), update: vi.fn().mockReturnValue(of({ id: 3 })), get: vi.fn(),
+      uploadImage: vi.fn().mockReturnValue(of({ id: 9 })), removeImage: vi.fn().mockReturnValue(of(undefined)),
+    };
     api.get.mockReturnValue(of({
       id: 3, name: 'Pilates', description: null, capacity: 10, day_of_week: 3, start_time: '19:00:00', duration_minutes: 55,
       is_active: false, bookable_id: null,
@@ -121,6 +127,147 @@ describe('AdminCourseFormComponent', () => {
 
     expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('I posti non possono essere meno degli iscritti attuali (3).'));
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // ---------- immagine del corso ----------
+
+  /** Simula la scelta di un file nel campo (nascosto) dell'immagine. */
+  function chooseFile(el: HTMLElement, file: File): void {
+    const field = el.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(field, 'files', { value: [file], configurable: true });
+    field.dispatchEvent(new Event('change'));
+  }
+  const png = (size = 1000) => new File([new Uint8Array(size)], 'foto.png', { type: 'image/png' });
+
+  beforeEach(() => {
+    // jsdom non sa creare gli indirizzi temporanei delle anteprime
+    URL.createObjectURL = vi.fn().mockReturnValue('blob:anteprima');
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  it('il campo file è nascosto: l\'unico controllo raggiungibile è il pulsante', async () => {
+    const { el } = await render();
+
+    expect(el.querySelector<HTMLInputElement>('input[type="file"]')!.hidden).toBe(true);
+    expect(el.textContent).toContain('Scegli un\'immagine');
+  });
+
+  it('rifiuta subito un formato non ammesso e non lo tiene da parte', async () => {
+    const { el, fixture } = await render();
+
+    chooseFile(el, new File(['x'], 'foto.gif', { type: 'image/gif' }));
+    fixture.detectChanges();
+
+    expect(el.querySelector('#course-image-error')!.textContent).toContain('JPEG, PNG o WebP');
+    expect(el.querySelector('img[alt^="Anteprima"]')).toBeNull();
+  });
+
+  it('rifiuta subito un file sopra i 2 MB', async () => {
+    const { el, fixture } = await render();
+
+    chooseFile(el, png(2 * 1024 * 1024 + 1));
+    fixture.detectChanges();
+
+    expect(el.querySelector('#course-image-error')!.textContent).toContain('2 MB');
+  });
+
+  it('un file valido mostra l\'anteprima e dice che verrà caricato al salvataggio', async () => {
+    const { el, fixture } = await render();
+
+    chooseFile(el, png());
+    fixture.detectChanges();
+
+    expect(el.querySelector('img[alt^="Anteprima"]')!.getAttribute('src')).toBe('blob:anteprima');
+    expect(el.querySelector('[role="status"]')!.textContent).toContain('foto.png');
+    expect(api.uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('salvando un corso nuovo con un file scelto, prima crea il corso e poi carica l\'immagine', async () => {
+    const { el, fixture, navigate } = await render();
+    const file = png();
+
+    type(el, 'name', 'Yoga');
+    chooseFile(el, file);
+    fixture.detectChanges();
+    submit(el);
+
+    expect(api.create).toHaveBeenCalled();
+    expect(api.uploadImage).toHaveBeenCalledWith(9, file);
+    expect(navigate).toHaveBeenCalledWith(['/admin/courses']);
+  });
+
+  it('senza file scelto non chiama il caricamento', async () => {
+    const { el, fixture } = await render('3');
+
+    submit(el);
+    fixture.detectChanges();
+
+    expect(api.uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('se solo l\'immagine fallisce il corso resta salvato: si avvisa e si torna all\'elenco', async () => {
+    const { el, fixture, navigate } = await render();
+    api.uploadImage.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 422, error: { errors: { image: ['L\'immagine non può superare i 2 MB.'] } } })));
+
+    type(el, 'name', 'Yoga');
+    chooseFile(el, png());
+    fixture.detectChanges();
+    submit(el);
+
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('2 MB'));
+    expect(navigate).toHaveBeenCalledWith(['/admin/courses']);
+  });
+
+  it('"Non caricare" scarta il file scelto', async () => {
+    const { el, fixture } = await render();
+
+    chooseFile(el, png());
+    fixture.detectChanges();
+    Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes('Non caricare'))!.click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('img[alt^="Anteprima"]')).toBeNull();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:anteprima');
+  });
+
+  it('in modifica, "Togli immagine" chiede conferma e poi toglie l\'immagine dal corso', async () => {
+    const { el, fixture } = await render('3');
+    api.get.mockReturnValue(of({ id: 3, name: 'Pilates', description: null, image_url: '/api/courses/3/image?v=1', capacity: 10, day_of_week: 3, start_time: '19:00:00', duration_minutes: 55, is_active: true, bookable_id: null }));
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    // Si ricrea il componente perché il corso con immagine arrivi al caricamento
+    const again = TestBed.createComponent(AdminCourseFormComponent);
+    again.detectChanges();
+    const remove = Array.from((again.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent!.includes('Togli immagine'))!;
+
+    remove.click();
+    again.detectChanges();
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(api.removeImage).toHaveBeenCalledWith(3);
+    expect(notify.success).toHaveBeenCalledWith('Immagine del corso tolta.');
+    expect(Array.from((again.nativeElement as HTMLElement).querySelectorAll('button')).some((b) => b.textContent!.includes('Togli immagine'))).toBe(false);
+    void el; void fixture;
+  });
+
+  it('se non si conferma, l\'immagine non viene tolta', async () => {
+    await render('3');
+    api.get.mockReturnValue(of({ id: 3, name: 'Pilates', description: null, image_url: '/x', capacity: 10, day_of_week: 3, start_time: '19:00:00', duration_minutes: 55, is_active: true, bookable_id: null }));
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const again = TestBed.createComponent(AdminCourseFormComponent);
+    again.detectChanges();
+
+    Array.from((again.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent!.includes('Togli immagine'))!.click();
+
+    expect(api.removeImage).not.toHaveBeenCalled();
+  });
+
+  it('con un\'immagine scelta e l\'errore mostrato la pagina resta accessibile', async () => {
+    const { el, fixture } = await render();
+
+    chooseFile(el, new File(['x'], 'foto.gif', { type: 'image/gif' }));
+    fixture.detectChanges();
+
+    await expectNoA11yViolations(el);
   });
 
   it('è accessibile (WCAG 2.2 AA, senza il contrasto)', async () => {

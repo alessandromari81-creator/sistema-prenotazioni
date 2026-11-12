@@ -60,6 +60,19 @@ export class CourseService {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
 
+  /** Carica o sostituisce l'immagine del corso (solo admin): file JPEG, PNG o WebP fino a 2 MB. Risponde con il corso aggiornato. */
+  uploadImage(id: number, file: File): Observable<Course> {
+    const body = new FormData();
+    body.append('image', file);
+
+    return this.http.post<Course>(`${this.base}/${id}/image`, body);
+  }
+
+  /** Toglie l'immagine del corso (solo admin). Risposta 204 senza corpo. */
+  removeImage(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}/image`);
+  }
+
   /** Assegna un utente come istruttore del corso (solo admin). Il corso restituito ha l'elenco aggiornato. */
   addInstructor(courseId: number, userId: number): Observable<Course> {
     return this.http.put<Course>(`${this.base}/${courseId}/instructors/${userId}`, {});

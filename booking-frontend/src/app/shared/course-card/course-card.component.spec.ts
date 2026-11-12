@@ -47,6 +47,14 @@ describe('CourseCardComponent', () => {
     expect(el.textContent).toContain('Istruttore: Luca Verdi');
   });
 
+  it('mostra la copertina: l\'immagine del corso se c\'è, altrimenti il ripiego', () => {
+    const withImage = render(course({ image_url: '/api/courses/7/image?v=1' }));
+    expect(withImage.querySelector('app-course-cover img')!.getAttribute('src')).toBe('/api/courses/7/image?v=1');
+
+    const without = render(course({ image_url: null }));
+    expect(without.querySelector('app-course-cover .cover-fallback')).not.toBeNull();
+  });
+
   it('scrive i posti liberi a parole', () => {
     expect(badges(render(course({ spots_left: 8 })))).toContain('8 posti liberi');
   });

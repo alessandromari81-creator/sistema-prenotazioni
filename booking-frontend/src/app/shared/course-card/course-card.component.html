@@ -1,4 +1,6 @@
-<mat-card appearance="outlined" [attr.aria-labelledby]="titleId()">
+<mat-card appearance="outlined" class="course-card" [attr.aria-labelledby]="titleId()">
+  <app-course-cover [course]="course()" />
+
   <mat-card-content>
     <h2 class="card-title" [id]="titleId()">{{ course().name }}</h2>
 

@@ -1,0 +1,11 @@
+/* La scheda: angoli arrotondati, la copertina in alto a filo, un'ombra leggera che cresce al passaggio del mouse */
+.course-card {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+.course-card:hover { box-shadow: var(--mat-sys-level2); transform: translateY(-2px); }
+.course-card mat-card-content { flex: 1; padding-top: 1rem; }
+.card-title { margin: 0 0 .5rem; font-size: 1.25rem; font-weight: 600; }

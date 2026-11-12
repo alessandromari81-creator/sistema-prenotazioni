@@ -13,6 +13,7 @@ import { apiErrorMessage } from '../../../core/services/features/api-error';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { courseSchedule } from '../../../core/utils/schedule';
+import { CourseCoverComponent } from '../../../shared/course-cover/course-cover.component';
 
 /**
  * Gestione dei corsi per gli amministratori (/admin/courses): elenco completo (anche i corsi disattivati)
@@ -21,8 +22,9 @@ import { courseSchedule } from '../../../core/utils/schedule';
 @Component({
   selector: 'app-admin-courses',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatTableModule],
+  imports: [CourseCoverComponent, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatTableModule],
   templateUrl: './admin-courses.component.html',
+  styleUrl: './admin-courses.component.scss',
 })
 export class AdminCoursesComponent implements OnInit {
   private api = inject(CourseService);
@@ -39,7 +41,7 @@ export class AdminCoursesComponent implements OnInit {
   protected search = signal('');
 
   /** Le colonne della tabella. */
-  protected readonly columns = ['name', 'when', 'seats', 'status', 'actions'];
+  protected readonly columns = ['cover', 'name', 'when', 'seats', 'status', 'actions'];
 
   /** All'apertura attiva la ricerca "ritardata" (parte 400 ms dopo l'ultimo tasto) e carica i corsi. */
   ngOnInit(): void {

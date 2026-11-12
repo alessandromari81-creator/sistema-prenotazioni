@@ -73,6 +73,7 @@ export interface Course {
   id: number;
   name: string;
   description: string | null;
+  image_url?: string | null; // indirizzo relativo dell'immagine di copertina (null = nessuna, si disegna un ripiego)
   capacity: number;          // posti disponibili
   day_of_week: number;       // 1 = lunedì ... 7 = domenica
   start_time: string;        // "HH:MM:SS", ora di Roma

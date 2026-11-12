@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { Course } from '../../core/models/models';
+import { CourseCoverComponent } from '../course-cover/course-cover.component';
 import { courseSchedule } from '../../core/utils/schedule';
 
 /**
@@ -14,8 +15,9 @@ import { courseSchedule } from '../../core/utils/schedule';
 @Component({
   selector: 'app-course-card',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatCardModule, MatIconModule],
+  imports: [CourseCoverComponent, RouterLink, MatButtonModule, MatCardModule, MatIconModule],
   templateUrl: './course-card.component.html',
+  styleUrl: './course-card.component.scss',
 })
 export class CourseCardComponent {
   /** Il corso da mostrare. */

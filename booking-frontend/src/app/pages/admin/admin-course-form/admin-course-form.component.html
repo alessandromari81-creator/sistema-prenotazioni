@@ -60,6 +60,44 @@
       </mat-select>
     </mat-form-field>
 
+    <fieldset class="image-field">
+      <legend>Immagine del corso (facoltativa)</legend>
+
+      <div class="image-preview">
+        @if (preview(); as url) {
+          <img [src]="url" alt="Anteprima dell'immagine scelta" />
+        } @else if (current(); as c) {
+          <app-course-cover [course]="c" />
+        } @else {
+          <app-course-cover [course]="{ id: 0, image_url: null }" />
+        }
+      </div>
+
+      <!-- Il campo file vero è nascosto (non si raggiunge con Tab): il pulsante qui sotto lo apre ed è l'unico controllo -->
+      <input #fileInput hidden type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileChosen($event)" />
+      <div class="image-actions">
+        <button mat-stroked-button type="button" (click)="fileInput.click()"
+          [attr.aria-describedby]="imageError() ? 'course-image-help course-image-error' : 'course-image-help'">
+          <mat-icon aria-hidden="true">upload</mat-icon>
+          {{ chosenFile() || current()?.image_url ? "Cambia immagine" : "Scegli un'immagine" }}
+        </button>
+        @if (chosenFile()) {
+          <button mat-button type="button" (click)="discardChosenFile(fileInput)">Non caricare</button>
+        }
+        @if (!chosenFile() && current()?.image_url) {
+          <button mat-button type="button" (click)="removeCurrentImage()">Togli immagine</button>
+        }
+      </div>
+
+      @if (chosenFile(); as file) {
+        <p class="muted" role="status">File scelto: {{ file.name }}. Verrà caricato quando salvi il corso.</p>
+      }
+      <p id="course-image-help" class="muted">JPEG, PNG o WebP, fino a 2 MB.</p>
+      @if (imageError()) {
+        <p id="course-image-error" class="alert alert--error" role="alert">{{ imageError() }}</p>
+      }
+    </fieldset>
+
     <p><mat-slide-toggle formControlName="is_active">Corso attivo (accetta iscrizioni)</mat-slide-toggle></p>
 
     <div class="form-actions">

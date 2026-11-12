@@ -10,6 +10,7 @@ import { NotificationService } from '../../../core/services/features/notificatio
 import { AuthService } from '../../../core/services/http/auth.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { courseSchedule } from '../../../core/utils/schedule';
+import { CourseCoverComponent } from '../../../shared/course-cover/course-cover.component';
 
 /**
  * La pagina di un corso (/courses/:id): dettagli, iscrizione e annullamento.
@@ -18,8 +19,9 @@ import { courseSchedule } from '../../../core/utils/schedule';
 @Component({
   selector: 'app-course-detail',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatTableModule],
+  imports: [CourseCoverComponent, RouterLink, MatButtonModule, MatIconModule, MatTableModule],
   templateUrl: './course-detail.component.html',
+  styleUrl: './course-detail.component.scss',
 })
 export class CourseDetailComponent implements OnInit {
   private api = inject(CourseService);

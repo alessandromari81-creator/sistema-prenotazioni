@@ -23,6 +23,11 @@
 } @else if (courses().length) {
   <div class="table-wrap mat-elevation-z1">
     <table mat-table [dataSource]="courses()" aria-label="Elenco dei corsi">
+      <ng-container matColumnDef="cover">
+        <th mat-header-cell *matHeaderCellDef scope="col"><span class="sr-only">Immagine</span></th>
+        <td mat-cell *matCellDef="let c"><app-course-cover class="thumb" [course]="c" /></td>
+      </ng-container>
+
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef scope="col">Nome</th>
         <td mat-cell *matCellDef="let c">{{ c.name }}</td>

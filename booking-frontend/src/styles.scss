@@ -12,25 +12,44 @@ html {
   color-scheme: light;
   @include mat.theme((
     color: (
-      primary: mat.$azure-palette,    /* colore principale: bottoni, menu, selezioni */
-      tertiary: mat.$cyan-palette,    /* colore secondario: accenti, evidenziazioni */
+      primary: mat.$violet-palette,   /* colore principale: bottoni, menu, selezioni */
+      tertiary: mat.$green-palette,   /* colore secondario: accenti, esiti positivi ("Sei iscritto") */
     ),
     typography: Roboto,
     density: 0,
   ));
 }
 
-/* Reset minimo: niente margini del browser, sfondo dal tema */
+/* Reset minimo: niente margini del browser. Lo sfondo è leggermente colorato, così le schede bianche risaltano. */
 body {
   margin: 0;
-  background: var(--mat-sys-surface-container-lowest);
+  background: var(--mat-sys-surface-container-low);
   color: var(--mat-sys-on-surface);
   font-family: Roboto, "Helvetica Neue", sans-serif;
+  line-height: 1.5;
+}
+
+/* Titoli: più decisi del predefinito, con un po' di respiro */
+h1 { font-size: 2rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
+h2 { font-size: 1.4rem; font-weight: 600; line-height: 1.3; }
+
+/* Forma e colori dei componenti Material, uguali in tutta l'app:
+   schede e pulsanti più arrotondati, schede bianche su sfondo colorato */
+:root {
+  --mat-card-outlined-container-shape: 16px;
+  --mat-card-outlined-container-color: var(--mat-sys-surface-container-lowest);
+  --mat-card-outlined-outline-color: var(--mat-sys-outline-variant);
+  --mat-button-filled-container-shape: 999px;
+  --mat-button-outlined-container-shape: 999px;
+  --mat-button-text-container-shape: 999px;
+  --mat-button-tonal-container-shape: 999px;
+  --mat-table-background-color: var(--mat-sys-surface-container-lowest);
+  --mat-table-header-headline-color: var(--mat-sys-on-surface);
 }
 
 /* Contenitore centrato per il contenuto delle pagine */
 .container {
-  max-width: 1040px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
 }
@@ -51,8 +70,8 @@ body {
 /* Griglia responsiva di card */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
 }
 
 /* Form che occupano tutta la larghezza disponibile */
@@ -63,9 +82,11 @@ body {
 /* Stato vuoto */
 .empty { text-align: center; padding: 2.5rem 1rem; color: var(--mat-sys-on-surface-variant); }
 
-/* Tabelle Material: scroll orizzontale su schermi stretti */
-.table-wrap { overflow-x: auto; }
+/* Tabelle Material: scroll orizzontale su schermi stretti, angoli arrotondati, intestazione evidenziata */
+.table-wrap { overflow-x: auto; border-radius: 16px; border: 1px solid var(--mat-sys-outline-variant); background: var(--mat-sys-surface-container-lowest); }
 table.mat-mdc-table { width: 100%; }
+table.mat-mdc-table th.mat-mdc-header-cell { background: var(--mat-sys-surface-container); font-weight: 600; }
+table.mat-mdc-table tr.mat-mdc-row:hover { background: var(--mat-sys-surface-container-low); }
 
 /* ==========================================================
    ACCESSIBILITÀ E COMPONENTI COMUNI (WCAG 2.2 AA)
@@ -163,7 +184,7 @@ main#main-content:focus, main#main-content:focus-visible { outline: none; }
   padding: 1rem 1.25rem;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 12px;
-  background: var(--mat-sys-surface);
+  background: var(--mat-sys-surface-container-lowest);
   margin-bottom: 1.5rem;
 }
 .summary-box h2 { margin-top: 0; }

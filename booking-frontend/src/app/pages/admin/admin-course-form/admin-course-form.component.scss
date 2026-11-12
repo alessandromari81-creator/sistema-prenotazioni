@@ -1,0 +1,6 @@
+/* Il campo dell'immagine: anteprima a destra del titolo, pulsanti sotto */
+.image-field { border: 1px solid var(--mat-sys-outline-variant); border-radius: 12px; padding: .75rem 1rem 1rem; margin: 0 0 1.25rem; }
+.image-field legend { padding: 0 .5rem; font-weight: 500; }
+.image-preview { max-width: 320px; border-radius: 12px; overflow: hidden; margin-bottom: .75rem; }
+.image-preview img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.image-actions { display: flex; flex-wrap: wrap; gap: .5rem; }

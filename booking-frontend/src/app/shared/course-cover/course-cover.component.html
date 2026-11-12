@@ -1,0 +1,7 @@
+@if (imageUrl(); as url) {
+  <img class="cover-image" [src]="url" alt="" loading="lazy" />
+} @else {
+  <div class="cover-fallback" [class]="toneClass()" aria-hidden="true">
+    <mat-icon>{{ icon() }}</mat-icon>
+  </div>
+}

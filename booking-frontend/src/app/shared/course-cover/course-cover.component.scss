@@ -1,0 +1,18 @@
+/* Il riquadro riempie la larghezza e ha proporzioni fisse, così le schede non "saltano" mentre le immagini caricano */
+:host { display: block; aspect-ratio: 16 / 9; overflow: hidden; background: var(--mat-sys-surface-container-high); }
+
+.cover-image { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.cover-fallback {
+  display: grid; place-items: center; width: 100%; height: 100%;
+  color: rgb(255 255 255 / .92);
+}
+.cover-fallback mat-icon { width: 4rem; height: 4rem; font-size: 4rem; }
+
+/* Sei sfumature, tutte abbastanza scure da far risaltare l'icona bianca */
+.tone-0 { background: linear-gradient(135deg, #5b3fd0, #8e5be8); }
+.tone-1 { background: linear-gradient(135deg, #0f766e, #2aa198); }
+.tone-2 { background: linear-gradient(135deg, #c2410c, #ea7a2f); }
+.tone-3 { background: linear-gradient(135deg, #be185d, #e5539a); }
+.tone-4 { background: linear-gradient(135deg, #1d4ed8, #4f8df0); }
+.tone-5 { background: linear-gradient(135deg, #15803d, #4caf62); }
