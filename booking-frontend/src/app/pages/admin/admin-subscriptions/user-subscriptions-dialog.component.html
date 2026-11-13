@@ -1,0 +1,54 @@
+<h2 mat-dialog-title>Abbonamenti di {{ data.user.name }}</h2>
+
+<mat-dialog-content>
+  <p class="muted email">{{ data.user.email }}</p>
+
+  @if (subscriptions().length) {
+    <ul class="plain-list">
+      @for (s of subscriptions(); track s.id) {
+        <li class="with-icon">
+          <span>
+            <strong>{{ s.plan?.name }}</strong>:
+            dal {{ s.starts_on | date: 'dd/MM/yyyy' }} al {{ s.ends_on | date: 'dd/MM/yyyy' }}
+          </span>
+          <span class="badge" [class.badge--ok]="s.is_active" [class.badge--warn]="!!s.cancelled_at">{{ statusText(s) }}</span>
+          @if (!s.cancelled_at) {
+            <button mat-button type="button" (click)="cancel(s)" [attr.aria-label]="'Annulla l\'abbonamento ' + s.plan?.name + ' di ' + data.user.name">Annulla</button>
+          }
+        </li>
+      }
+    </ul>
+  } @else if (loaded()) {
+    <p class="empty">Questa persona non ha abbonamenti.</p>
+  }
+
+  <h3>Assegna un piano</h3>
+  <form class="assign-form" [formGroup]="form" aria-label="Assegna un abbonamento" (ngSubmit)="assign()">
+    <mat-form-field appearance="outline">
+      <mat-label>Piano</mat-label>
+      <mat-select formControlName="plan">
+        @for (p of plans(); track p.id) {
+          <mat-option [value]="p.id">{{ p.name }} ({{ p.duration_days }} giorni, {{ p.max_courses }} corsi)</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.plan.hasError('required')) {
+        <mat-error>Scegli un piano.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Inizio (facoltativo)</mat-label>
+      <input matInput type="date" formControlName="startsOn" [min]="today" />
+      <mat-hint>Se vuoto parte da oggi</mat-hint>
+      @if (form.controls.startsOn.hasError('pastDate')) {
+        <mat-error>La data non può essere nel passato.</mat-error>
+      }
+    </mat-form-field>
+
+    <button mat-flat-button type="submit">Assegna abbonamento</button>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Chiudi</button>
+</mat-dialog-actions>

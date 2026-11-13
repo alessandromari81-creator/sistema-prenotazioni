@@ -1,0 +1,6 @@
+.email { margin: 0 0 1rem; }
+
+/* Il modulo di assegnazione: i campi uno sotto l'altro, a tutta larghezza, e il pulsante in fondo */
+.assign-form { display: flex; flex-direction: column; gap: .25rem; }
+.assign-form mat-form-field { width: 100%; margin-bottom: .5rem; } /* spazio per il messaggio d'errore sotto il campo */
+.assign-form button { align-self: flex-start; margin-top: 1rem; }

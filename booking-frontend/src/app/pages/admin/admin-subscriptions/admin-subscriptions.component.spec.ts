@@ -1,129 +1,106 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { expectNoA11yViolations } from '../../../../testing/a11y';
-import { Subscription } from '../../../core/models/models';
-import { SubscriptionService } from '../../../core/services/http/subscription.service';
 import { UserService } from '../../../core/services/http/user.service';
 import { AdminSubscriptionsComponent } from './admin-subscriptions.component';
-import { NotificationService } from '../../../core/services/features/notification.service';
+import { UserSubscriptionsDialogComponent } from './user-subscriptions-dialog.component';
 
-const plan = { id: 1, name: 'Mensile', description: null, duration_days: 30, max_courses: 2, is_active: true };
-const users = { data: [{ id: 4, name: 'Mario Rossi', email: 'mario@example.com', role: 'user' }] };
+const mario = { id: 4, name: 'Mario Rossi', email: 'mario@example.com', role: 'user' };
+const anna = { id: 5, name: 'Anna Bianchi', email: 'anna@example.com', role: 'user' };
 
-function subscription(overrides: Partial<Subscription> = {}): Subscription {
-  return { id: 10, user_id: 4, subscription_plan_id: 1, starts_on: '2026-11-01', ends_on: '2026-11-30', cancelled_at: null, is_active: true, plan, ...overrides };
+function page(data: unknown[], total = data.length) {
+  return { data, total, current_page: 1, per_page: 10, last_page: 1 };
 }
 
 describe('AdminSubscriptionsComponent', () => {
-  // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
-  const notify = { success: vi.fn(), error: vi.fn() };
-  beforeEach(() => {
-    notify.success.mockReset();
-    notify.error.mockReset();
-  });
+  let list: ReturnType<typeof vi.fn>;
+  let dialog: { open: ReturnType<typeof vi.fn> };
 
-  let api: { plans: ReturnType<typeof vi.fn>; ofUser: ReturnType<typeof vi.fn>; assign: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> };
-
-  async function render(existing: Subscription[] = []) {
-    api = {
-      plans: vi.fn().mockReturnValue(of([plan])),
-      ofUser: vi.fn().mockReturnValue(of(existing)),
-      assign: vi.fn().mockReturnValue(of(subscription())),
-      cancel: vi.fn().mockReturnValue(of(subscription({ cancelled_at: '2026-11-12T10:00:00Z', is_active: false }))),
-    };
+  async function render(response: unknown = page([mario, anna])) {
+    list = vi.fn().mockReturnValue(response instanceof HttpErrorResponse ? throwError(() => response) : of(response));
+    dialog = { open: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [AdminSubscriptionsComponent],
-      providers: [{ provide: NotificationService, useValue: notify }, { provide: SubscriptionService, useValue: api }, { provide: UserService, useValue: { list: vi.fn().mockReturnValue(of(users)) } }],
+      providers: [{ provide: UserService, useValue: { list } }, { provide: MatDialog, useValue: dialog }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AdminSubscriptionsComponent);
     fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
-
-    el.querySelector<HTMLButtonElement>('button[aria-label="Gestisci gli abbonamenti di Mario Rossi"]')!.click();
+    await fixture.whenStable();
     fixture.detectChanges();
-    return { el, fixture };
+    return { el: fixture.nativeElement as HTMLElement, fixture };
   }
 
   const text = (el: HTMLElement) => el.textContent!.replace(/\s+/g, ' ');
 
-  it('mostra gli utenti e, scelto uno, i suoi abbonamenti con lo stato a parole', async () => {
-    const { el } = await render([subscription(), subscription({ id: 11, cancelled_at: '2026-10-01T10:00:00Z', is_active: false })]);
-
-    expect(text(el)).toContain('Abbonamenti di Mario Rossi');
-    expect(text(el)).toContain('dal 01/11/2026 al 30/11/2026');
-    expect(text(el)).toContain('Attivo');
-    expect(text(el)).toContain('Annullato');
-  });
-
-  it('segna come "premuto" il pulsante dell\'utente scelto', async () => {
+  it('mostra gli utenti in una tabella, con nome ed email', async () => {
     const { el } = await render();
 
-    expect(el.querySelector('button[aria-label="Gestisci gli abbonamenti di Mario Rossi"]')!.getAttribute('aria-pressed')).toBe('true');
+    expect(list).toHaveBeenCalledWith({ page: 1, perPage: 10, search: '' });
+    expect(el.querySelectorAll('table tr.mat-mdc-row').length).toBe(2);
+    expect(text(el)).toContain('Mario Rossi');
+    expect(text(el)).toContain('anna@example.com');
   });
 
-  it('senza abbonamenti lo dice', async () => {
-    const { el } = await render([]);
+  it('ha il paginatore, con il totale degli utenti', async () => {
+    const { el } = await render(page([mario], 25));
 
-    expect(text(el)).toContain('Questa persona non ha abbonamenti.');
+    expect(el.querySelector('mat-paginator')).not.toBeNull();
+    expect(text(el)).toContain('of 25');
   });
 
-  it('il pulsante di assegnazione resta spento finché non si sceglie un piano', async () => {
+  it('cambiando pagina ricarica gli utenti di quella pagina', async () => {
+    const { fixture } = await render(page([mario], 25));
+
+    fixture.componentInstance['onPageChange']({ pageIndex: 1, pageSize: 10, length: 25 });
+
+    expect(list).toHaveBeenLastCalledWith({ page: 2, perPage: 10, search: '' });
+  });
+
+  it('la ricerca riparte dalla prima pagina e passa il testo', async () => {
+    vi.useFakeTimers();
+    try {
+      const { fixture } = await render(page([mario], 25));
+      fixture.componentInstance['page'].set(3);
+
+      fixture.componentInstance['onSearch']('mar');
+      vi.advanceTimersByTime(400);
+
+      expect(list).toHaveBeenLastCalledWith({ page: 1, perPage: 10, search: 'mar' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('il pulsante di una riga apre la finestra con gli abbonamenti di quella persona', async () => {
     const { el } = await render();
 
-    expect(Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes('Assegna abbonamento'))!.disabled).toBe(true);
+    el.querySelector<HTMLButtonElement>('button[aria-label="Gestisci gli abbonamenti di Mario Rossi"]')!.click();
+
+    expect(dialog.open).toHaveBeenCalledWith(UserSubscriptionsDialogComponent, expect.objectContaining({ data: { user: mario } }));
   });
 
-  it('assegnando un piano chiama l\'API e annuncia l\'esito', async () => {
-    const { el, fixture } = await render();
-    fixture.componentInstance['planId'].set(1);
-    fixture.detectChanges();
+  it('senza utenti lo dice, e con una ricerca senza risultati lo dice in modo diverso', async () => {
+    const { el, fixture } = await render(page([]));
+    expect(text(el)).toContain('Non ci sono utenti.');
 
-    el.querySelector<HTMLFormElement>('form[aria-label="Assegna un abbonamento"]')!.dispatchEvent(new Event('submit'));
+    fixture.componentInstance['search'].set('zzz');
     fixture.detectChanges();
-
-    expect(api.assign).toHaveBeenCalledWith(4, 1, undefined);
-    expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Abbonamento assegnato a Mario Rossi.'));
+    expect(text(el)).toContain('Nessun utente trovato.');
   });
 
-  it('se i periodi si sovrappongono mostra il rifiuto del server', async () => {
-    const { el, fixture } = await render();
-    api.assign.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 422, error: { errors: { starts_on: ['L\'utente ha già un abbonamento in questo periodo.'] } } })));
-    fixture.componentInstance['planId'].set(1);
+  it('se il caricamento fallisce lo scrive nella pagina', async () => {
+    const { el } = await render(new HttpErrorResponse({ status: 500 }));
 
-    el.querySelector<HTMLFormElement>('form[aria-label="Assegna un abbonamento"]')!.dispatchEvent(new Event('submit'));
-    fixture.detectChanges();
-
-    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('ha già un abbonamento in questo periodo'));
-  });
-
-  it('annullando un abbonamento chiede conferma e poi chiama l\'API', async () => {
-    const { el, fixture } = await render([subscription()]);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-    el.querySelector<HTMLButtonElement>('button[aria-label^="Annulla l\'abbonamento"]')!.click();
-    fixture.detectChanges();
-
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(api.cancel).toHaveBeenCalledWith(10);
-    confirmSpy.mockRestore();
-  });
-
-  it('se non si conferma non annulla nulla', async () => {
-    const { el } = await render([subscription()]);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-
-    el.querySelector<HTMLButtonElement>('button[aria-label^="Annulla l\'abbonamento"]')!.click();
-
-    expect(api.cancel).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
+    expect(el.querySelector('[role="alert"]')).not.toBeNull();
   });
 
   it('è accessibile (WCAG 2.2 AA, senza il contrasto)', async () => {
-    const { el } = await render([subscription()]);
+    const { el } = await render();
 
     await expectNoA11yViolations(el);
   });
