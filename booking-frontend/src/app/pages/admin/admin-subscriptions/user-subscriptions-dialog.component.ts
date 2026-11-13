@@ -7,8 +7,10 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { filter, switchMap } from 'rxjs';
 import { Subscription, SubscriptionPlan, User } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 
@@ -44,6 +46,7 @@ export class UserSubscriptionsDialogComponent implements OnInit {
   protected data = inject<UserSubscriptionsDialogData>(MAT_DIALOG_DATA);
   private subscriptionApi = inject(SubscriptionService);
   private notify = inject(NotificationService); // avvisi a comparsa
+  private confirmDialog = inject(ConfirmService);
   private fb = inject(FormBuilder);
 
   protected subscriptions = signal<Subscription[]>([]);
@@ -91,17 +94,29 @@ export class UserSubscriptionsDialogComponent implements OnInit {
     });
   }
 
-  /** Annulla un abbonamento dopo conferma. Le iscrizioni già fatte restano valide. */
+  /**
+   * Annulla un abbonamento dopo aver chiesto conferma con una finestra. Se l'utente rinuncia non succede nulla.
+   * Le iscrizioni ai corsi già fatte restano valide.
+   */
   protected cancel(subscription: Subscription): void {
-    if (!confirm('Annullare questo abbonamento? Le iscrizioni ai corsi già fatte restano valide.')) return;
-
-    this.subscriptionApi.cancel(subscription.id).subscribe({
-      next: () => {
-        this.notify.success('Abbonamento annullato.');
-        this.loadSubscriptions();
-      },
-      error: (e: HttpErrorResponse) => this.notify.error(apiErrorMessage(e, 'Annullamento non riuscito.')),
-    });
+    this.confirmDialog
+      .confirm({
+        title: 'Annullare l\'abbonamento?',
+        message: `L'abbonamento ${subscription.plan?.name ?? ''} di ${this.data.user.name} verrà annullato. Le iscrizioni ai corsi già fatte restano valide.`,
+        confirmLabel: 'Annulla abbonamento',
+        cancelLabel: 'Mantieni',
+      })
+      .pipe(
+        filter((confirmed) => confirmed),
+        switchMap(() => this.subscriptionApi.cancel(subscription.id))
+      )
+      .subscribe({
+        next: () => {
+          this.notify.success('Abbonamento annullato.');
+          this.loadSubscriptions();
+        },
+        error: (e: HttpErrorResponse) => this.notify.error(apiErrorMessage(e, 'Annullamento non riuscito.')),
+      });
   }
 
   /** Lo stato dell'abbonamento a parole: "Attivo", "Annullato", "Scaduto" o "Non ancora iniziato". */

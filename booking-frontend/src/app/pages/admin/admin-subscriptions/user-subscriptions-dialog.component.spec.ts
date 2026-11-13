@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { expectNoA11yViolations } from '../../../../testing/a11y';
 import { Subscription } from '../../../core/models/models';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 import { UserSubscriptionsDialogComponent } from './user-subscriptions-dialog.component';
@@ -22,8 +23,10 @@ describe('UserSubscriptionsDialogComponent', () => {
   beforeEach(() => {
     notify.success.mockReset();
     notify.error.mockReset();
+    confirmAnswer = of(true);
   });
 
+  let confirmAnswer = of(true);
   let api: { plans: ReturnType<typeof vi.fn>; ofUser: ReturnType<typeof vi.fn>; assign: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> };
 
   async function render(existing: Subscription[] = []) {
@@ -38,6 +41,7 @@ describe('UserSubscriptionsDialogComponent', () => {
       imports: [UserSubscriptionsDialogComponent],
       providers: [
         { provide: NotificationService, useValue: notify },
+        { provide: ConfirmService, useValue: { confirm: vi.fn(() => confirmAnswer) } },
         { provide: SubscriptionService, useValue: api },
         { provide: MAT_DIALOG_DATA, useValue: { user } },
         { provide: MatDialogRef, useValue: { close: vi.fn() } },
@@ -132,26 +136,35 @@ describe('UserSubscriptionsDialogComponent', () => {
   });
 
   it('annullando un abbonamento chiede conferma e poi chiama l\'API', async () => {
+    confirmAnswer = of(true);
     const { el, fixture } = await render([subscription()]);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmService = TestBed.inject(ConfirmService);
 
     el.querySelector<HTMLButtonElement>('button[aria-label^="Annulla l\'abbonamento"]')!.click();
     fixture.detectChanges();
 
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(confirmService.confirm).toHaveBeenCalledWith(expect.objectContaining({ confirmLabel: 'Annulla abbonamento', message: expect.stringContaining('Mario Rossi') }));
     expect(api.cancel).toHaveBeenCalledWith(10);
     expect(notify.success).toHaveBeenCalledWith('Abbonamento annullato.');
-    confirmSpy.mockRestore();
+  });
+
+  it('se il server rifiuta l\'annullamento mostra il motivo', async () => {
+    const { el, fixture } = await render([subscription()]);
+    api.cancel.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 422, error: { message: 'Abbonamento già annullato.' } })));
+
+    el.querySelector<HTMLButtonElement>('button[aria-label^="Annulla l\'abbonamento"]')!.click();
+    fixture.detectChanges();
+
+    expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('Abbonamento già annullato.'));
   });
 
   it('se non si conferma non annulla nulla', async () => {
+    confirmAnswer = of(false);
     const { el } = await render([subscription()]);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     el.querySelector<HTMLButtonElement>('button[aria-label^="Annulla l\'abbonamento"]')!.click();
 
     expect(api.cancel).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
   });
 
   it('un abbonamento già annullato non ha il pulsante "Annulla"', async () => {
