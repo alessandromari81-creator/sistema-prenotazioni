@@ -52,6 +52,10 @@ sistema-prenotazioni/
 | **Materiali PDF di un corso (admin)** | **Il corso visto da un iscritto, con i materiali** |
 | ![Materiali PDF di un corso](docs/screenshots/admin-materiali.png) | ![Dettaglio del corso con i materiali](docs/screenshots/dettaglio-corso-materiali.png) |
 
+Dalla pagina "Utenti e abbonamenti" una finestra mostra gli abbonamenti di una persona e permette di assegnarne uno o annullarlo:
+
+![Finestra con gli abbonamenti di una persona](docs/screenshots/admin-utenti-finestra.png)
+
 La regola "un istruttore non può essere anche studente dello stesso corso": il server la fa rispettare e l'interfaccia
 mostra il motivo.
 
