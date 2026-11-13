@@ -98,28 +98,28 @@
           </a>
         }
 
-        <mat-divider />
-
-        <button mat-list-item type="button" (click)="logout()">
-          <mat-icon matListItemIcon aria-hidden="true">logout</mat-icon>
-          <span matListItemTitle>Esci</span>
-        </button>
-
-      } @else {
-        <mat-divider />
-
-        <button mat-list-item type="button" (click)="login()">
-          <mat-icon matListItemIcon aria-hidden="true">login</mat-icon>
-          <span matListItemTitle>Accedi</span>
-        </button>
-
-        <button mat-list-item type="button" (click)="register()">
-          <mat-icon matListItemIcon aria-hidden="true">person_add</mat-icon>
-          <span matListItemTitle>Registrati</span>
-        </button>
       }
 
     </mat-nav-list>
+
+    <!-- Azioni dell'account: separate dalle voci di navigazione, a tutta larghezza e con aria attorno -->
+    <div class="drawer-actions">
+      @if (auth.user()) {
+        <button mat-stroked-button type="button" (click)="logout()">
+          <mat-icon aria-hidden="true">logout</mat-icon>
+          Esci
+        </button>
+      } @else {
+        <button mat-flat-button type="button" (click)="login()">
+          <mat-icon aria-hidden="true">login</mat-icon>
+          Accedi
+        </button>
+        <button mat-stroked-button type="button" (click)="register()">
+          <mat-icon aria-hidden="true">person_add</mat-icon>
+          Registrati
+        </button>
+      }
+    </div>
   </mat-sidenav>
 
   <mat-sidenav-content>
@@ -142,15 +142,14 @@
       <div class="right">
         @if (auth.user()) {
           <!-- Il nome accessibile inizia con il testo visibile (WCAG 2.5.3): il resto lo leggono solo i lettori di schermo -->
-          <a class="user-name" routerLink="/profile">{{ auth.user()?.name }}<span class="sr-only"> (vai al mio profilo)</span></a>
+          <a class="user-name" routerLink="/profile">
+            <mat-icon aria-hidden="true">account_circle</mat-icon>
+            <span>{{ auth.user()?.name }}<span class="sr-only"> (vai al mio profilo)</span></span>
+          </a>
 
-          <button
-            mat-icon-button
-            type="button"
-            aria-label="Esci dall'applicazione"
-            (click)="logout()"
-          >
+          <button mat-stroked-button type="button" (click)="logout()">
             <mat-icon aria-hidden="true">logout</mat-icon>
+            Esci
           </button>
         } @else {
           <button mat-flat-button type="button" (click)="login()">
