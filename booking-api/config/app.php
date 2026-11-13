@@ -17,6 +17,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Versione pubblicata dell'applicazione
+    |--------------------------------------------------------------------------
+    | Un identificativo che cambia a ogni pubblicazione (di solito l'hash del commit). Lo stesso valore viene dato
+    | alla build del frontend: se le risposte dell'API portano una versione diversa da quella con cui è stato
+    | costruito il frontend, la pagina aperta nel browser è vecchia e si invita l'utente ad aggiornarla.
+    | In sviluppo resta "dev" da entrambe le parti, quindi non compare mai nessun avviso.
+    */
+    'version' => env('APP_VERSION', 'dev'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

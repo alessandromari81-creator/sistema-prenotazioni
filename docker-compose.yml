@@ -25,6 +25,8 @@ x-api: &api
     APP_DEBUG: "false"
     APP_KEY: ${APP_KEY:-base64:vhl9OuydSSqOasEqR4x5eKYXvwlIaO/cqg7+Y3ZrPbk=}
     APP_TIMEZONE: Europe/Rome
+    # Versione pubblicata: uguale a quella data alla build di "web" (vedi sotto); con "dev" non compare mai l'avviso
+    APP_VERSION: ${APP_VERSION:-dev}
     APP_URL: http://localhost:${WEB_PORT:-8080}
     # Keycloak: l'emittente è l'indirizzo che vede il browser, le chiavi si scaricano dalla rete interna di Docker
     KEYCLOAK_ISSUER: http://localhost:${KEYCLOAK_PORT:-8180}/realms/palestra
@@ -162,7 +164,12 @@ services:
 
   # Frontend Angular compilato, servito da nginx; inoltra /api e /sanctum al backend
   web:
-    build: ./booking-frontend
+    build:
+      context: ./booking-frontend
+      args:
+        # Stessa versione dell'API: pubblicando con APP_VERSION=$(git rev-parse --short HEAD) docker compose up -d --build
+        # le pagine già aperte si accorgono della novità e propongono di aggiornarsi
+        APP_VERSION: ${APP_VERSION:-dev}
     image: sistema-prenotazioni-web:demo
     ports:
       - "${WEB_PORT:-8080}:80"

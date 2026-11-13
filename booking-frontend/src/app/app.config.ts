@@ -8,6 +8,7 @@ import {
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
+import { appVersionInterceptor } from './core/interceptors/app-version.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { AuthService } from './core/services/http/auth.service';
 import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
@@ -23,8 +24,9 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    // L'interceptor aggiunge a ogni richiesta all'API il token di Keycloak
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // authInterceptor aggiunge a ogni richiesta all'API il token di Keycloak;
+    // appVersionInterceptor legge la versione pubblicata dalle risposte e avvisa se la pagina è vecchia
+    provideHttpClient(withInterceptors([authInterceptor, appVersionInterceptor])),
     // Prima di mostrare qualsiasi pagina, controlla se l'utente ha una sessione su Keycloak e carica il suo profilo
     provideAppInitializer(() => inject(AuthService).init()),
     { provide: LOCALE_ID, useValue: 'it-IT' },         // lingua per le pipe (date, number)
