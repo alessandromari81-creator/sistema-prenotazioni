@@ -187,8 +187,8 @@ di Keycloak vanno su <http://localhost:18025>, non sulla 8025 di Sail.
   vanno aggiornati lì (e in `booking-frontend/src/environments/environment.ts` per Keycloak).
 
 > È una configurazione **solo per provare l'app**: chiavi, password e utenti sono quelli di prova, le immagini includono
-> le dipendenze di sviluppo (il seeder usa Faker), Keycloak gira in modalità `start-dev` e il frontend è compilato in
-> modalità `development`. Per lavorare sul codice si usa l'avvio qui sotto.
+> le dipendenze di sviluppo (il seeder usa Faker), Keycloak gira in modalità `start-dev`. Il frontend è compilato in
+> modalità `production` (file con l'impronta nel nome). Per lavorare sul codice si usa l'avvio qui sotto.
 
 ## Requisiti per lo sviluppo
 
@@ -258,7 +258,7 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 # Backend: 300 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
-# Frontend: 214 test (Vitest + axe-core)
+# Frontend: 226 test (Vitest + axe-core)
 cd booking-frontend && ng test --watch=false
 ```
 
