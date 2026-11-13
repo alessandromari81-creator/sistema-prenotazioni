@@ -21,7 +21,19 @@ export class AppVersionService {
    * Se il server non dichiara nessuna versione (o la app è costruita senza versione) non fa nulla.
    */
   check(serverVersion: string | null): void {
-    if (this.notified || !serverVersion || serverVersion === APP_VERSION) {
+    if (!serverVersion || serverVersion === APP_VERSION) {
+      return;
+    }
+
+    this.notifyOutdated();
+  }
+
+  /**
+   * Mostra l'avviso "nuova versione" (una volta sola). Si usa anche quando una pagina non riesce a caricare un pezzo
+   * dell'app (lazy loading) perché dopo una pubblicazione quel file non esiste più: segno sicuro che la pagina è vecchia.
+   */
+  notifyOutdated(): void {
+    if (this.notified) {
       return;
     }
 

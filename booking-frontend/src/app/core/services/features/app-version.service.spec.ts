@@ -41,6 +41,14 @@ describe('AppVersionService', () => {
     expect(notifications.action).toHaveBeenCalledTimes(1);
   });
 
+  it('notifyOutdated avvisa una volta sola e condivide l\'avviso con check', () => {
+    service.notifyOutdated();
+    service.notifyOutdated();
+    service.check('versione-nuova');
+
+    expect(notifications.action).toHaveBeenCalledTimes(1);
+  });
+
   it('il pulsante "Aggiorna" ricarica la pagina', () => {
     const reload = vi.fn();
     vi.stubGlobal('location', { ...window.location, reload });

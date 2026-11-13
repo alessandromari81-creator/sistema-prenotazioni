@@ -5,12 +5,13 @@ import {
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { appVersionInterceptor } from './core/interceptors/app-version.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { AuthService } from './core/services/http/auth.service';
+import { handleNavigationError } from './core/utils/navigation-error-handler';
 import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
@@ -23,7 +24,8 @@ registerLocaleData(localeIt);
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    // Se una pagina non riesce a caricare un pezzo dell'app (scheda vecchia dopo una pubblicazione) si invita ad aggiornare
+    provideRouter(routes, withNavigationErrorHandler(handleNavigationError)),
     // authInterceptor aggiunge a ogni richiesta all'API il token di Keycloak;
     // appVersionInterceptor legge la versione pubblicata dalle risposte e avvisa se la pagina è vecchia
     provideHttpClient(withInterceptors([authInterceptor, appVersionInterceptor])),
