@@ -1,11 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs';
 import { DateTime } from 'luxon';
 
 import { BookingService } from '../../../core/services/http/booking.service';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { Booking } from '../../../core/models/models';
 
 import { MatIconModule } from '@angular/material/icon';
@@ -38,6 +39,7 @@ export class MyBookingsComponent implements OnInit {
 
   private api = inject(BookingService);
   private snack = inject(MatSnackBar);
+  private confirmDialog = inject(ConfirmService);
 
   private searchSubject = new Subject<string>();
 
@@ -160,9 +162,18 @@ export class MyBookingsComponent implements OnInit {
 
   /** Chiede conferma, annulla sul server e aggiorna la riga. */
   cancel(b: Booking): void {
-    if (!confirm('Vuoi annullare questa prenotazione?')) return;
-
-    this.api.cancelBooking(b.id).subscribe({
+    this.confirmDialog
+      .confirm({
+        title: 'Annullare la prenotazione?',
+        message: 'La prenotazione verrà annullata.',
+        confirmLabel: 'Annulla prenotazione',
+        cancelLabel: 'Mantieni',
+      })
+      .pipe(
+        filter((confirmed) => confirmed),
+        switchMap(() => this.api.cancelBooking(b.id))
+      )
+      .subscribe({
       next: () => {
 
         this.bookings.update(list =>

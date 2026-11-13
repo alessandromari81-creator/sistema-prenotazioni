@@ -7,11 +7,14 @@ import { expectNoA11yViolations } from '../../../../testing/a11y';
 import { BookingService } from '../../../core/services/http/booking.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { AdminCourseFormComponent } from './admin-course-form.component';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
+import { FakeConfirm } from '../../../../testing/confirm';
 
 describe('AdminCourseFormComponent', () => {
   // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
   const notify = { success: vi.fn(), error: vi.fn() };
+  const confirmer = new FakeConfirm(); // la finestra di conferma: ogni test decide se l'utente conferma
   beforeEach(() => {
     notify.success.mockReset();
     notify.error.mockReset();
@@ -34,7 +37,7 @@ describe('AdminCourseFormComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AdminCourseFormComponent],
-      providers: [{ provide: NotificationService, useValue: notify }, 
+      providers: [{ provide: NotificationService, useValue: notify }, { provide: ConfirmService, useValue: confirmer }, 
         provideRouter([]),
         { provide: CourseService, useValue: api },
         { provide: BookingService, useValue: { getBookables: vi.fn().mockReturnValue(of({ data: [{ id: 1, name: 'Sala grande' }] })) } },
@@ -233,7 +236,7 @@ describe('AdminCourseFormComponent', () => {
   it('in modifica, "Togli immagine" chiede conferma e poi toglie l\'immagine dal corso', async () => {
     const { el, fixture } = await render('3');
     api.get.mockReturnValue(of({ id: 3, name: 'Pilates', description: null, image_url: '/api/courses/3/image?v=1', capacity: 10, day_of_week: 3, start_time: '19:00:00', duration_minutes: 55, is_active: true, bookable_id: null }));
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    confirmer.answer = true;
     // Si ricrea il componente perché il corso con immagine arrivi al caricamento
     const again = TestBed.createComponent(AdminCourseFormComponent);
     again.detectChanges();
@@ -242,7 +245,7 @@ describe('AdminCourseFormComponent', () => {
     remove.click();
     again.detectChanges();
 
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(confirmer.confirm).toHaveBeenCalled();
     expect(api.removeImage).toHaveBeenCalledWith(3);
     expect(notify.success).toHaveBeenCalledWith('Immagine del corso tolta.');
     expect(Array.from((again.nativeElement as HTMLElement).querySelectorAll('button')).some((b) => b.textContent!.includes('Togli immagine'))).toBe(false);
@@ -252,7 +255,7 @@ describe('AdminCourseFormComponent', () => {
   it('se non si conferma, l\'immagine non viene tolta', async () => {
     await render('3');
     api.get.mockReturnValue(of({ id: 3, name: 'Pilates', description: null, image_url: '/x', capacity: 10, day_of_week: 3, start_time: '19:00:00', duration_minutes: 55, is_active: true, bookable_id: null }));
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    confirmer.answer = false;
     const again = TestBed.createComponent(AdminCourseFormComponent);
     again.detectChanges();
 

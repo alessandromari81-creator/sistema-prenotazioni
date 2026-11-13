@@ -5,7 +5,9 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { expectNoA11yViolations } from '../../../../testing/a11y';
 import { FileSaverService } from '../../../core/services/features/file-saver.service';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
+import { FakeConfirm } from '../../../../testing/confirm';
 import { CourseService } from '../../../core/services/http/course.service';
 import { AdminCourseMaterialsComponent } from './admin-course-materials.component';
 
@@ -14,6 +16,7 @@ const material = { id: 5, course_id: 7, title: 'Scheda di allenamento', size_byt
 
 describe('AdminCourseMaterialsComponent', () => {
   const notify = { success: vi.fn(), error: vi.fn() };
+  const confirmer = new FakeConfirm(); // la finestra di conferma: ogni test decide se l'utente conferma
   let api: Record<'get' | 'materials' | 'uploadMaterial' | 'deleteMaterial' | 'materialFile', ReturnType<typeof vi.fn>>;
   const fileSaver = { show: vi.fn(), save: vi.fn() };
 
@@ -37,7 +40,7 @@ describe('AdminCourseMaterialsComponent', () => {
       imports: [AdminCourseMaterialsComponent],
       providers: [
         provideRouter([]),
-        { provide: NotificationService, useValue: notify },
+        { provide: NotificationService, useValue: notify }, { provide: ConfirmService, useValue: confirmer },
         { provide: FileSaverService, useValue: fileSaver },
         { provide: CourseService, useValue: api },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '7' }) } } },
@@ -149,7 +152,7 @@ describe('AdminCourseMaterialsComponent', () => {
 
   it('elimina un materiale dopo la conferma', async () => {
     const { el, fixture } = await render();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    confirmer.answer = true;
 
     button(el, 'Elimina').click();
     fixture.detectChanges();
@@ -161,7 +164,7 @@ describe('AdminCourseMaterialsComponent', () => {
 
   it('senza conferma non elimina nulla', async () => {
     const { el } = await render();
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    confirmer.answer = false;
 
     button(el, 'Elimina').click();
 

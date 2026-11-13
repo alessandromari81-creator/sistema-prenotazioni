@@ -1,11 +1,13 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
+import { filter, switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { SubscriptionPlan } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { SubscriptionService } from '../../../core/services/http/subscription.service';
 
@@ -22,6 +24,7 @@ import { SubscriptionService } from '../../../core/services/http/subscription.se
 export class AdminPlansComponent implements OnInit {
   private api = inject(SubscriptionService);
   private notify = inject(NotificationService); // avvisi a comparsa
+  private confirmDialog = inject(ConfirmService);
 
   protected plans = signal<SubscriptionPlan[]>([]);
   protected loading = signal(true);
@@ -53,10 +56,17 @@ export class AdminPlansComponent implements OnInit {
 
   /** Elimina un piano dopo conferma; se è già stato assegnato il server rifiuta e il motivo si mostra a video. */
   protected remove(plan: SubscriptionPlan): void {
-    if (!confirm(`Eliminare il piano "${plan.name}"?`)) return;
-
-
-    this.api.deletePlan(plan.id).subscribe({
+    this.confirmDialog
+      .confirm({
+        title: 'Eliminare il piano?',
+        message: `Il piano "${plan.name}" verrà eliminato.`,
+        confirmLabel: 'Elimina piano',
+      })
+      .pipe(
+        filter((confirmed) => confirmed),
+        switchMap(() => this.api.deletePlan(plan.id))
+      )
+      .subscribe({
       next: () => {
         this.notify.success(`Il piano ${plan.name} è stato eliminato.`);
         this.load();

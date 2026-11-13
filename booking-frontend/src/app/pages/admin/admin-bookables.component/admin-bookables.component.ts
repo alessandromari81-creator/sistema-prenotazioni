@@ -2,11 +2,12 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, filter, switchMap, tap } from 'rxjs';
 
 import { BookingService } from '../../../core/services/http/booking.service';
 import { Bookable } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -35,6 +36,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 export class AdminBookablesComponent implements OnInit {
 
   private api = inject(BookingService);
+  private confirmDialog = inject(ConfirmService);
   private searchSubject = new Subject<string>();
 
   bookables = signal<Bookable[]>([]);
@@ -116,15 +118,18 @@ export class AdminBookablesComponent implements OnInit {
 
   /** Elimina una sala e aggiorna la tabella. */
   remove(b: Bookable): void {
-    const ok = confirm(
-      `Eliminare "${b.name}"? Verranno cancellati anche i suoi orari e tutte le sue prenotazioni.`
-    );
-
-    if (!ok) return;
-
-    this.error.set(null);
-
-    this.api.deleteBookable(b.id).subscribe({
+    this.confirmDialog
+      .confirm({
+        title: 'Eliminare la sala?',
+        message: `La sala "${b.name}" verrà eliminata, con i suoi orari e tutte le sue prenotazioni.`,
+        confirmLabel: 'Elimina sala',
+      })
+      .pipe(
+        filter((confirmed) => confirmed),
+        tap(() => this.error.set(null)),
+        switchMap(() => this.api.deleteBookable(b.id))
+      )
+      .subscribe({
       next: () => {
         this.total.update(total => total - 1);
 

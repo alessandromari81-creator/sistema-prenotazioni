@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 import { Course } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { CourseService } from '../../../core/services/http/course.service';
 import { courseSchedule } from '../../../core/utils/schedule';
@@ -29,6 +30,7 @@ import { CourseCoverComponent } from '../../../shared/course-cover/course-cover.
 export class AdminCoursesComponent implements OnInit {
   private api = inject(CourseService);
   private notify = inject(NotificationService); // avvisi a comparsa
+  private confirmDialog = inject(ConfirmService);
   private searchSubject = new Subject<string>();
 
   protected courses = signal<Course[]>([]);
@@ -93,10 +95,17 @@ export class AdminCoursesComponent implements OnInit {
 
   /** Elimina un corso dopo conferma. Il server rifiuta se ci sono iscritti attivi: il motivo si mostra a video. */
   protected remove(course: Course): void {
-    if (!confirm(`Eliminare il corso "${course.name}"?`)) return;
-
-
-    this.api.delete(course.id).subscribe({
+    this.confirmDialog
+      .confirm({
+        title: 'Eliminare il corso?',
+        message: `Il corso "${course.name}" verrà eliminato insieme alla sua immagine e ai suoi materiali PDF.`,
+        confirmLabel: 'Elimina corso',
+      })
+      .pipe(
+        filter((confirmed) => confirmed),
+        switchMap(() => this.api.delete(course.id))
+      )
+      .subscribe({
       next: () => {
         this.notify.success(`Il corso ${course.name} è stato eliminato.`);
         if (this.courses().length === 1 && this.page() > 1) this.page.update((p) => p - 1);

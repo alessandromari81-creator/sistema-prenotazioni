@@ -7,7 +7,9 @@ import { expectNoA11yViolations } from '../../../../testing/a11y';
 import { Course } from '../../../core/models/models';
 import { CourseService } from '../../../core/services/http/course.service';
 import { AdminCoursesComponent } from './admin-courses.component';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
+import { FakeConfirm } from '../../../../testing/confirm';
 
 const yoga: Course = {
   id: 7, name: 'Yoga', description: null, capacity: 12, day_of_week: 1, start_time: '18:30:00', duration_minutes: 60,
@@ -22,6 +24,7 @@ function page(data: Course[]) {
 describe('AdminCoursesComponent', () => {
   // Gli avvisi a comparsa (snackbar) si provano sul servizio: qui non c'è nessun avviso fisso nella pagina
   const notify = { success: vi.fn(), error: vi.fn() };
+  const confirmer = new FakeConfirm(); // la finestra di conferma: ogni test decide se l'utente conferma
   beforeEach(() => {
     notify.success.mockReset();
     notify.error.mockReset();
@@ -34,7 +37,7 @@ describe('AdminCoursesComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AdminCoursesComponent],
-      providers: [{ provide: NotificationService, useValue: notify }, provideRouter([]), { provide: CourseService, useValue: api }],
+      providers: [{ provide: NotificationService, useValue: notify }, { provide: ConfirmService, useValue: confirmer }, provideRouter([]), { provide: CourseService, useValue: api }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AdminCoursesComponent);
@@ -63,36 +66,33 @@ describe('AdminCoursesComponent', () => {
 
   it('eliminando un corso chiede conferma e annuncia l\'esito', async () => {
     const { el, fixture } = await render();
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    confirmer.answer = true;
 
     el.querySelector<HTMLButtonElement>('button[aria-label="Elimina Yoga"]')!.click();
     fixture.detectChanges();
 
     expect(api.delete).toHaveBeenCalledWith(7);
     expect(notify.success).toHaveBeenCalledWith(expect.stringContaining('Il corso Yoga è stato eliminato.'));
-    confirmSpy.mockRestore();
   });
 
   it('se il corso ha iscritti mostra il rifiuto del server', async () => {
     const { el, fixture } = await render();
     api.delete.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 422, error: { errors: { course: ['Il corso ha 5 iscritti: disattivalo invece di eliminarlo.'] } } })));
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    confirmer.answer = true;
 
     el.querySelector<HTMLButtonElement>('button[aria-label="Elimina Yoga"]')!.click();
     fixture.detectChanges();
 
     expect(notify.error).toHaveBeenCalledWith(expect.stringContaining('Il corso ha 5 iscritti'));
-    confirmSpy.mockRestore();
   });
 
   it('se non si conferma non elimina nulla', async () => {
     const { el } = await render();
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    confirmer.answer = false;
 
     el.querySelector<HTMLButtonElement>('button[aria-label="Elimina Yoga"]')!.click();
 
     expect(api.delete).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
   });
 
   it('è accessibile (WCAG 2.2 AA, senza il contrasto)', async () => {

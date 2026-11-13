@@ -2,6 +2,7 @@ import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { filter, switchMap } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -13,6 +14,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Availability, Bookable } from '../../../core/models/models';
 import { BookingService } from '../../../core/services/http/booking.service';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 
 
 // Giorni della settimana: il numero è lo stesso usato dal backend (1 = lunedì ... 7 = domenica)
@@ -50,6 +52,7 @@ export class AdminAvailabilitiesComponent implements OnInit {
   private api = inject(BookingService);
   private route = inject(ActivatedRoute);
   private snack = inject(MatSnackBar); // notifiche a comparsa
+  private confirmDialog = inject(ConfirmService);
 
   days = DAYS;
 
@@ -126,13 +129,19 @@ export class AdminAvailabilitiesComponent implements OnInit {
 
   /** Chiede conferma ed elimina la fascia. */
   remove(a: Availability): void {
-    const ok = confirm(
-      `Eliminare la fascia ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)}? ` +
-        'Le prenotazioni già fatte restano, ma non si potranno prenotare nuovi slot in quella fascia.'
-    );
-    if (!ok) return;
-
-    this.api.deleteAvailability(a.id).subscribe({
+    this.confirmDialog
+      .confirm({
+        title: 'Eliminare la fascia oraria?',
+        message:
+          `La fascia ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} verrà eliminata. ` +
+          'Le prenotazioni già fatte restano, ma non si potranno prenotare nuovi slot in quella fascia.',
+        confirmLabel: 'Elimina fascia',
+      })
+      .pipe(
+        filter((confirmed) => confirmed),
+        switchMap(() => this.api.deleteAvailability(a.id))
+      )
+      .subscribe({
       next: () => {
         this.availabilities.update((list) => list.filter((x) => x.id !== a.id));
         this.snack.open('Fascia eliminata', 'Chiudi', { duration: 3000 });

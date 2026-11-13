@@ -1,12 +1,14 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { filter, switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Course, CourseMaterial } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { FileSaverService } from '../../../core/services/features/file-saver.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { CourseService } from '../../../core/services/http/course.service';
@@ -29,6 +31,7 @@ const PDF_MAX_BYTES = 10 * 1024 * 1024;
 export class AdminCourseMaterialsComponent implements OnInit {
   private api = inject(CourseService);
   private notify = inject(NotificationService); // avvisi a comparsa
+  private confirmDialog = inject(ConfirmService);
   private fileSaver = inject(FileSaverService);
   private route = inject(ActivatedRoute);
 
@@ -164,9 +167,17 @@ export class AdminCourseMaterialsComponent implements OnInit {
 
   /** Elimina un materiale (con conferma). */
   protected remove(material: CourseMaterial): void {
-    if (!confirm(`Eliminare il materiale "${material.title}"?`)) return;
-
-    this.api.deleteMaterial(material.course_id, material.id).subscribe({
+    this.confirmDialog
+      .confirm({
+        title: 'Eliminare il materiale?',
+        message: `Il file "${material.title}" verrà eliminato.`,
+        confirmLabel: 'Elimina materiale',
+      })
+      .pipe(
+        filter((confirmed) => confirmed),
+        switchMap(() => this.api.deleteMaterial(material.course_id, material.id))
+      )
+      .subscribe({
       next: () => {
         this.materials.update((list) => list.filter((m) => m.id !== material.id));
         this.notify.success(`Materiale "${material.title}" eliminato.`);

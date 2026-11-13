@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { catchError, of, switchMap } from 'rxjs';
+import { catchError, filter, of, switchMap } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Bookable, Course, CourseInput } from '../../../core/models/models';
 import { apiErrorMessage } from '../../../core/services/features/api-error';
+import { ConfirmService } from '../../../core/services/features/confirm.service';
 import { NotificationService } from '../../../core/services/features/notification.service';
 import { BookingService } from '../../../core/services/http/booking.service';
 import { CourseService } from '../../../core/services/http/course.service';
@@ -36,6 +37,7 @@ const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 export class AdminCourseFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private notify = inject(NotificationService); // avvisi a comparsa
+  private confirmDialog = inject(ConfirmService);
   private api = inject(CourseService);
   private bookingApi = inject(BookingService);
   private route = inject(ActivatedRoute);
@@ -154,9 +156,19 @@ export class AdminCourseFormComponent implements OnInit {
   /** Toglie dal corso l'immagine già caricata, subito (con conferma). */
   protected removeCurrentImage(): void {
     const id = this.courseId;
-    if (id === null || !confirm("Togliere l'immagine del corso?")) return;
+    if (id === null) return;
 
-    this.api.removeImage(id).subscribe({
+    this.confirmDialog
+      .confirm({
+        title: 'Togliere l\'immagine?',
+        message: 'L\'immagine del corso verrà tolta subito.',
+        confirmLabel: 'Togli immagine',
+      })
+      .pipe(
+        filter((confirmed) => confirmed),
+        switchMap(() => this.api.removeImage(id))
+      )
+      .subscribe({
       next: () => {
         this.current.update((c) => (c ? { ...c, image_url: null } : c));
         this.notify.success("Immagine del corso tolta.");
