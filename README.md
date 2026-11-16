@@ -259,7 +259,7 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 ## Test
 
 ```bash
-# Backend: 310 test (PostgreSQL, database dedicato "testing")
+# Backend: 313 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
 # Frontend: 252 test (Vitest + axe-core)

@@ -4,13 +4,19 @@ namespace App\Notifications;
 
 use App\Models\Booking;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * Email inviata all'utente quando la sua prenotazione viene confermata.
+ *
+ * Implementa ShouldQueue: "notify()" non spedisce la mail durante la richiesta ma scrive un biglietto nella coda,
+ * e la spedisce un worker (php artisan queue:work). L'utente non aspetta l'SMTP e, se la posta è spenta,
+ * la prenotazione resta valida: a fallire è solo il job (si riprova, poi finisce in failed_jobs).
+ * Senza un worker acceso la mail non parte.
  */
-class BookingConfirmed extends Notification
+class BookingConfirmed extends Notification implements ShouldQueue
 {
     use Queueable;
 

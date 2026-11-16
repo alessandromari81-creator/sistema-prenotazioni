@@ -9,8 +9,10 @@ use App\Models\User;
 use App\Notifications\BookingConfirmed;
 use App\Services\BookingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -163,6 +165,50 @@ class BookingServiceTest extends TestCase
         }
 
         Notification::assertNothingSent();
+    }
+
+    /** La conferma non si spedisce durante la richiesta: si scrive un biglietto nella coda e la spedisce il worker. */
+    public function test_create_queues_the_confirmation_instead_of_sending_it_during_the_request(): void
+    {
+        Queue::fake();
+
+        $this->service->create($this->user, $this->bookable->id, $this->mondayAt('09:00'));
+
+        Queue::assertPushed(
+            SendQueuedNotifications::class,
+            fn (SendQueuedNotifications $job) => $job->notification instanceof BookingConfirmed
+        );
+    }
+
+    /** Se la prenotazione viene rifiutata, nella coda non finisce nulla. */
+    public function test_create_queues_nothing_when_the_booking_fails(): void
+    {
+        Queue::fake();
+
+        try {
+            $this->service->create($this->user, $this->bookable->id, $this->mondayAt('14:00'));
+        } catch (ValidationException) {
+            // atteso
+        }
+
+        Queue::assertNothingPushed();
+    }
+
+    /**
+     * Il percorso vero: con la coda "sync" dei test il job gira subito, come se un worker lo prendesse. Passa quindi
+     * dalla serializzazione (prenotazione e sala vengono rilette dal database) e la mail esce con il contenuto giusto.
+     */
+    public function test_the_queued_confirmation_is_sent_with_the_right_content_when_the_job_runs(): void
+    {
+        $this->service->create($this->user, $this->bookable->id, $this->mondayAt('09:00'));
+
+        $messages = app('mailer')->getSymfonyTransport()->messages();
+
+        $this->assertCount(1, $messages);
+        $email = $messages->first()->getOriginalMessage();
+        $this->assertSame('Prenotazione confermata', $email->getSubject());
+        $this->assertStringContainsString($this->bookable->name, $email->getHtmlBody());
+        $this->assertSame($this->user->email, $email->getTo()[0]->getAddress());
     }
 
     // ---------- cancel ----------
