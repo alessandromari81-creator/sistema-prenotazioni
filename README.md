@@ -259,7 +259,7 @@ lunedì-venerdì, 9:00-13:00 e 15:00-19:00.
 ## Test
 
 ```bash
-# Backend: 307 test (PostgreSQL, database dedicato "testing")
+# Backend: 310 test (PostgreSQL, database dedicato "testing")
 cd booking-api && ./vendor/bin/sail artisan test
 
 # Frontend: 252 test (Vitest + axe-core)
@@ -270,7 +270,9 @@ cd booking-frontend && ng test --watch=false
   prova con un Keycloak finto: i test generano una coppia di chiavi RSA, firmano da soli i token (anche sbagliati:
   scaduti, di un altro emittente, con firma o algoritmo falsi) e verificano che l'API li accetti o li rifiuti.
 - **Frontend**: servizio di accesso, interceptor, guardie, componenti e controlli di accessibilità con axe-core.
-- Non c'è un test di concorrenza con più processi: i test verificano le regole, non la corsa tra richieste simultanee.
+- **Concorrenza**: un test lancia più processi PHP veri che si iscrivono nello stesso istante (8 persone per 3 posti, un piano da
+  1 corso con 4 iscrizioni insieme, un doppio clic) e controlla che i blocchi del database (`lockForUpdate`) reggano.
+  È una prova, non una dimostrazione: una corsa dipende dai tempi, e il test copre solo le iscrizioni.
 
 ## API
 
