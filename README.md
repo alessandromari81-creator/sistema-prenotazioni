@@ -1,5 +1,7 @@
 # Palestra: corsi, abbonamenti e prenotazioni
 
+**Sviluppato con il supporto di Claude (sviluppo assistito da AI).**
+
 Applicazione web per la gestione di una palestra. Gli **utenti** si iscrivono ai corsi con un abbonamento, gli
 **istruttori** vedono i corsi che insegnano e chi è iscritto, gli **amministratori** gestiscono corsi, istruttori,
 piani di abbonamento e abbonamenti. Si possono anche prenotare le sale scegliendo uno slot libero.
@@ -169,6 +171,9 @@ La prima volta costruisce le immagini (qualche minuto) e Keycloak impiega una tr
 | `sara.neri@example.com` | istruttrice di Spinning e CrossFit |
 | `mario.rossi@example.com` | studente con abbonamento Mensile attivo |
 | `anna.bianchi@example.com` | studentessa **senza** abbonamento (provare l'iscrizione e vedere il rifiuto) |
+
+> Questi utenti e queste password (come `admin` / `admin` di Keycloak e `booking` / `booking` del database) sono **solo di prova,
+> per la demo locale**: non sono account reali e non vanno usati né esposti in un ambiente vero.
 
 Oppure clicca "Registrati": Keycloak invia la mail di verifica a Mailpit.
 
